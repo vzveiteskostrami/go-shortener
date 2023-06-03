@@ -1,31 +1,34 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
+	"sync"
 )
 
 // -------------------------------------------------------------------------------------
 var (
-	currURLnum int64
-	store      map[string]string
+	currURLnum  int64
+	store       map[string]string
+	lockCounter sync.Mutex
 )
 
 // *************************************************************************************
 func main() {
-	//currURLnum = 0
-	//store = make(map[string]string)
+	currURLnum = 0
+	store = make(map[string]string)
 
-	//mux := http.NewServeMux()
-	//mux.HandleFunc(`/`, entryPoint)
+	mux := http.NewServeMux()
+	mux.HandleFunc(`/`, entryPoint)
 
-	//err := http.ListenAndServe(":8080", mux)
-	//if err != nil {
-	//	panic(err)
-	//}
-	os.Exit(0)
+	err := http.ListenAndServe(":8080", mux)
+	if err != nil {
+		fmt.Println(err.Error())
+		//panic(err)
+	}
+	//os.Exit(0)
 }
 
 // *************************************************************************************
@@ -50,8 +53,10 @@ func entryPoint(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		lockCounter.Lock()
 		surl := strconv.FormatInt(currURLnum, 36)
 		currURLnum++
+		lockCounter.Unlock()
 		store[surl] = url
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("http://localhost:8080/" + surl))
