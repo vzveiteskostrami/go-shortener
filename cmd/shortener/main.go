@@ -15,16 +15,16 @@ var (
 
 // *************************************************************************************
 func main() {
-	currURLnum = 0
-	store = make(map[string]string)
+	//currURLnum = 0
+	//store = make(map[string]string)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc(`/`, entryPoint)
+	//mux := http.NewServeMux()
+	//mux.HandleFunc(`/`, entryPoint)
 
-	err := http.ListenAndServe(":8080", mux)
-	if err != nil {
-		panic(err)
-	}
+	//err := http.ListenAndServe(":8080", mux)
+	//if err != nil {
+	//	panic(err)
+	//}
 	os.Exit(0)
 }
 
