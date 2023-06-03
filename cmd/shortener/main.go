@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -24,6 +25,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	os.Exit(0)
 }
 
 // *************************************************************************************
