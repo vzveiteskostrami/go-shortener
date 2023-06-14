@@ -98,6 +98,6 @@ func setLink(w http.ResponseWriter, r *http.Request) {
 		store[surl] = url
 		w.WriteHeader(http.StatusCreated)
 
-		w.Write([]byte(cfg.OutAddr.Host + ":" + strconv.Itoa(cfg.OutAddr.Port) + "/" + surl))
+		w.Write([]byte("http://" + cfg.OutAddr.Host + ":" + strconv.Itoa(cfg.OutAddr.Port) + "/" + surl))
 	}
 }
