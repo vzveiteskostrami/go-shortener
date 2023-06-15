@@ -29,7 +29,14 @@ func getAddrAndPort(s string) (string, int, error) {
 	h := ""
 	p := int(0)
 	args := strings.Split(s, ":")
-	if len(args) == 2 {
+	if len(args) == 2 || len(args) == 3 {
+		if len(args) == 3 {
+			h = args[0] + ":" + args[1]
+			args[1] = args[2]
+		} else {
+			h = args[0]
+		}
+
 		if args[1] == "" {
 			return "", -1, errors.New("неверный формат строки, требуется host:port")
 		}
@@ -37,10 +44,6 @@ func getAddrAndPort(s string) (string, int, error) {
 		if err != nil {
 			return "", -1, errors.New("неверный номер порта, " + err.Error())
 		}
-		if args[0] == "" {
-			args[0] = "localhost"
-		}
-		h = args[0]
 	} else {
 		return "", -1, errors.New("неверный формат строки, требуется host:port")
 	}
