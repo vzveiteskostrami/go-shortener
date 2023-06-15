@@ -23,15 +23,15 @@ var (
 
 // *************************************************************************************
 func main() {
-	flag.Parse()
 	configStart()
+	flag.Parse()
 	currURLnum = 0
 	store = make(map[string]string)
 
 	fmt.Println("Сервер запущен на " + cfg.InAddr.Host + ":" + strconv.Itoa(cfg.InAddr.Port))
 
-	//log.Fatal(http.ListenAndServe(cfg.InAddr.Host+":"+strconv.Itoa(cfg.InAddr.Port), mainRouter()))
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(cfg.InAddr.Port), mainRouter()))
+	log.Fatal(http.ListenAndServe(cfg.InAddr.Host+":"+strconv.Itoa(cfg.InAddr.Port), mainRouter()))
+	//log.Fatal(http.ListenAndServe(":"+strconv.Itoa(cfg.InAddr.Port), mainRouter()))
 }
 
 // *************************************************************************************
