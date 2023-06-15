@@ -1,17 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-/*
-func Test_entryPoint(t *testing.T) {
+func Test_setLink(t *testing.T) {
 	tests := []struct {
 		method       string
 		url          string
@@ -19,10 +17,9 @@ func Test_entryPoint(t *testing.T) {
 		body         string
 		expectedBody string
 	}{
-		//{method: http.MethodGet, url: "/1234", expectedCode: http.StatusBadRequest, body: "", expectedBody: `Не найден shortURL 1234`},
-		//{method: http.MethodPut, url: "/", expectedCode: http.StatusBadRequest, body: "", expectedBody: ""Ожидался POST или GET"},
-		//{method: http.MethodDelete, url: "/", expectedCode: http.StatusBadRequest, body: "", expectedBody: ""Ожидался POST или GET"},
-		{method: http.MethodPost, url: "/", expectedCode: http.StatusOK, body: "www.yandex.ru", expectedBody: "http:/127.0.0.1:8080/0"},
+		{method: http.MethodPut, url: "/", expectedCode: http.StatusBadRequest, body: "", expectedBody: "Не указан URL"},
+		{method: http.MethodDelete, url: "/", expectedCode: http.StatusBadRequest, body: "", expectedBody: "Не указан URL"},
+		{method: http.MethodPost, url: "/", expectedCode: http.StatusCreated, body: "www.yandex.ru", expectedBody: "http://127.0.0.1:8080/0"},
 	}
 
 	for _, tc := range tests {
@@ -31,7 +28,7 @@ func Test_entryPoint(t *testing.T) {
 			r := httptest.NewRequest(tc.method, tc.url, s)
 			w := httptest.NewRecorder()
 
-			entryPoint(w, r)
+			setLink(w, r)
 
 			assert.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
 			if tc.expectedBody != "" {
@@ -40,8 +37,38 @@ func Test_entryPoint(t *testing.T) {
 		})
 	}
 }
-*/
 
+func Test_getLink(t *testing.T) {
+	tests := []struct {
+		method       string
+		url          string
+		expectedCode int
+		body         string
+		expectedBody string
+	}{
+		{method: http.MethodGet, url: "/1234", expectedCode: http.StatusBadRequest, body: "", expectedBody: `Не найден shortURL`},
+		{method: http.MethodPut, url: "/", expectedCode: http.StatusBadRequest, body: "", expectedBody: `Не найден shortURL`},
+		//{method: http.MethodDelete, url: "/", expectedCode: http.StatusBadRequest, body: "", expectedBody: ""Ожидался POST или GET"},
+		//{method: http.MethodPost, url: "/", expectedCode: http.StatusOK, body: "www.yandex.ru", expectedBody: "http:/127.0.0.1:8080/0"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.method, func(t *testing.T) {
+			s := strings.NewReader(tc.body)
+			r := httptest.NewRequest(tc.method, tc.url, s)
+			w := httptest.NewRecorder()
+
+			getLink(w, r)
+
+			assert.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
+			if tc.expectedBody != "" {
+				assert.Equal(t, tc.expectedBody, strings.Trim(w.Body.String(), " \n\r"), "Тело ответа не совпадает с ожидаемым")
+			}
+		})
+	}
+}
+
+/*
 func Test_main(t *testing.T) {
 	tests := []struct {
 		method       string
@@ -84,3 +111,4 @@ func Test_main(t *testing.T) {
 		})
 	}
 }
+*/
