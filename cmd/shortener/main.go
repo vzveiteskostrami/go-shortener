@@ -102,6 +102,6 @@ func setLink(w http.ResponseWriter, r *http.Request) {
 			configStart()
 		}
 
-		w.Write([]byte("http://" + cfg.OutAddr.Host + ":" + strconv.Itoa(cfg.OutAddr.Port) + "/" + surl))
+		w.Write([]byte(cfg.OutAddr.Host + ":" + strconv.Itoa(cfg.OutAddr.Port) + "/" + surl))
 	}
 }
