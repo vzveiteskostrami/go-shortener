@@ -3,8 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -55,19 +53,19 @@ func configStart() {
 	flag.Var(cfg.InAddr, "a", "In net address host:port")
 	_ = flag.Value(cfg.OutAddr)
 	flag.Var(cfg.OutAddr, "b", "Out net address host:port")
-	var err error
-	s := os.Getenv("SERVER_ADDRESS")
-	if s != "" {
-		cfg.InAddr.Host, cfg.InAddr.Port, err = getAddrAndPort(s)
-		if err != nil {
-			fmt.Println("Неудачный парсинг переменной окружения SERVER_ADDRESS")
-		}
-	}
-	s = os.Getenv("BASE_URL")
-	if s != "" {
-		cfg.OutAddr.Host, cfg.InAddr.Port, err = getAddrAndPort(s)
-		if err != nil {
-			fmt.Println("Неудачный парсинг переменной окружения BASE_URL")
-		}
-	}
+	//var err error
+	//s := os.Getenv("SERVER_ADDRESS")
+	//if s != "" {
+	//	cfg.InAddr.Host, cfg.InAddr.Port, err = getAddrAndPort(s)
+	//	if err != nil {
+	//		fmt.Println("Неудачный парсинг переменной окружения SERVER_ADDRESS")
+	//	}
+	//}
+	//s = os.Getenv("BASE_URL")
+	//if s != "" {
+	//	cfg.OutAddr.Host, cfg.InAddr.Port, err = getAddrAndPort(s)
+	//	if err != nil {
+	//		fmt.Println("Неудачный парсинг переменной окружения BASE_URL")
+	//	}
+	//}
 }
