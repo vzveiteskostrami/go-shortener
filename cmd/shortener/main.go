@@ -28,7 +28,8 @@ func main() {
 	currURLnum = 0
 	store = make(map[string]string)
 
-	fmt.Println("Сервер запущен")
+	fmt.Println("Сервер запущен на " + cfg.InAddr.Host + ":" + strconv.Itoa(cfg.InAddr.Port))
+
 	log.Fatal(http.ListenAndServe(cfg.InAddr.Host+":"+strconv.Itoa(cfg.InAddr.Port), mainRouter()))
 }
 

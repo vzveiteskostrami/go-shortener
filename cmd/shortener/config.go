@@ -29,13 +29,7 @@ func getAddrAndPort(s string) (string, int, error) {
 	h := ""
 	p := int(0)
 	args := strings.Split(s, ":")
-	if len(args) == 1 {
-		p, err = strconv.Atoi(args[0])
-		if err != nil {
-			return "", -1, errors.New("неверный номер порта, " + err.Error())
-		}
-		h = "localhost"
-	} else if len(args) == 2 {
+	if len(args) == 2 {
 		if args[1] == "" {
 			return "", -1, errors.New("неверный формат строки, требуется host:port")
 		}
@@ -61,7 +55,7 @@ type Cfg struct {
 func configStart() {
 	cfg.InAddr = new(NetAddress)
 	cfg.OutAddr = new(NetAddress)
-	cfg.InAddr.Host = ""
+	cfg.InAddr.Host = "localhost"
 	cfg.InAddr.Port = 8080
 	cfg.OutAddr.Host = "http://127.0.0.1"
 	cfg.OutAddr.Port = 8080
