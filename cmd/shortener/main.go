@@ -23,8 +23,8 @@ var (
 
 // *************************************************************************************
 func main() {
-	configStart()
 	flag.Parse()
+	configStart()
 	currURLnum = 0
 	store = make(map[string]string)
 

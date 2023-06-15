@@ -59,6 +59,7 @@ func configStart() {
 	cfg.InAddr.Port = 8080
 	cfg.OutAddr.Host = "http://127.0.0.1"
 	cfg.OutAddr.Port = 8080
+	_ = flag.Value(cfg.InAddr)
 	flag.Var(cfg.InAddr, "a", "In net address host:port")
 	_ = flag.Value(cfg.OutAddr)
 	flag.Var(cfg.OutAddr, "b", "Out net address host:port")
