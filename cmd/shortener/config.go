@@ -25,16 +25,32 @@ func (na *NetAddress) Set(flagValue string) error {
 }
 
 func getAddrAndPort(s string) (string, int, error) {
+	var err error
+	h := ""
+	p := int(0)
 	args := strings.Split(s, ":")
-	if len(args) != 2 {
+	if len(args) == 1 {
+		p, err = strconv.Atoi(args[0])
+		if err != nil {
+			return "", -1, errors.New("неверный номер порта, " + err.Error())
+		}
+		h = "localhost"
+	} else if len(args) == 2 {
+		if args[1] == "" {
+			return "", -1, errors.New("неверный формат строки, требуется host:port")
+		}
+		p, err = strconv.Atoi(args[1])
+		if err != nil {
+			return "", -1, errors.New("неверный номер порта, " + err.Error())
+		}
+		if args[0] == "" {
+			args[0] = "localhost"
+		}
+		h = args[0]
+	} else {
 		return "", -1, errors.New("неверный формат строки, требуется host:port")
 	}
-
-	p, err := strconv.Atoi(args[1])
-	if err != nil {
-		return "", -1, errors.New("неверный номер порта, " + err.Error())
-	}
-	return args[0], p, nil
+	return h, p, nil
 }
 
 type Cfg struct {
@@ -49,7 +65,6 @@ func configStart() {
 	cfg.InAddr.Port = 8080
 	cfg.OutAddr.Host = "http://127.0.0.1"
 	cfg.OutAddr.Port = 8080
-	_ = flag.Value(cfg.InAddr)
 	flag.Var(cfg.InAddr, "a", "In net address host:port")
 	_ = flag.Value(cfg.OutAddr)
 	flag.Var(cfg.OutAddr, "b", "Out net address host:port")
