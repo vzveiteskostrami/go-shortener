@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -10,37 +9,39 @@ import (
 	"sync"
 	"time"
 
+	config "github.com/vzveiteskostrami/go-shortener/cmd/shortener/Cfg"
+
 	"github.com/go-chi/chi/v5"
 )
 
-// -------------------------------------------------------------------------------------
 var (
-	currURLnum  int64
+	currURLNum  int64
 	store       map[string]string
 	lockCounter sync.Mutex
 	srv         *http.Server
 )
 
-// *************************************************************************************
 func main() {
-	configStart()
-	flag.Parse()
-	currURLnum = 0
+	config.ReadData()
+	currURLNum = 0
 	store = make(map[string]string)
 
-	fmt.Println("Сервер запущен на " + cfg.InAddr.Host + ":" + strconv.Itoa(cfg.InAddr.Port))
+	srv = &http.Server{
+		Addr:        config.Addresses.In.Host + ":" + strconv.Itoa(config.Addresses.In.Port),
+		Handler:     mainRouter(),
+		IdleTimeout: time.Second * 1,
+	}
 
-	log.Fatal(http.ListenAndServe(cfg.InAddr.Host+":"+strconv.Itoa(cfg.InAddr.Port), mainRouter()))
-	//log.Fatal(http.ListenAndServe(":"+strconv.Itoa(cfg.InAddr.Port), mainRouter()))
+	fmt.Println("Сервер запущен на " + config.Addresses.In.Host + ":" + strconv.Itoa(config.Addresses.In.Port))
+
+	log.Fatal(srv.ListenAndServe())
 }
 
-// *************************************************************************************
 func closeServer() {
 	time.Sleep(100 * time.Millisecond)
 	srv.Close()
 }
 
-// *************************************************************************************
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
 
@@ -49,7 +50,6 @@ func mainRouter() chi.Router {
 	return r
 }
 
-// *************************************************************************************
 func getLink(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
@@ -64,7 +64,6 @@ func getLink(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-// *************************************************************************************
 func setLink(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	err := r.ParseForm()
@@ -91,8 +90,8 @@ func setLink(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Сервер выключен"))
 		go closeServer()
 	} else {
-		surl := strconv.FormatInt(currURLnum, 36)
-		currURLnum++
+		surl := strconv.FormatInt(currURLNum, 36)
+		currURLNum++
 		lockCounter.Unlock()
 		if store == nil {
 			store = make(map[string]string)
@@ -100,10 +99,10 @@ func setLink(w http.ResponseWriter, r *http.Request) {
 		store[surl] = url
 		w.WriteHeader(http.StatusCreated)
 
-		if cfg.InAddr == nil {
-			configStart()
+		if config.Addresses.In == nil {
+			config.ReadData()
 		}
 
-		w.Write([]byte(cfg.OutAddr.Host + ":" + strconv.Itoa(cfg.OutAddr.Port) + "/" + surl))
+		w.Write([]byte(config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + surl))
 	}
 }
