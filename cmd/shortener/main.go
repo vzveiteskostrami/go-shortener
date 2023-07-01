@@ -70,10 +70,10 @@ func mainRouter() chi.Router {
 
 func getLink() http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, `Ожидался метод `+http.MethodGet, http.StatusBadRequest)
-			return
-		}
+		//if r.Method != http.MethodGet {
+		//	http.Error(w, `Ожидался метод `+http.MethodGet, http.StatusBadRequest)
+		//	return
+		//}
 		w.Header().Set("Content-Type", "text/plain")
 		link := chi.URLParam(r, "shlink")
 
@@ -91,10 +91,10 @@ func getLink() http.Handler {
 
 func setLink() http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, `Ожидался метод `+http.MethodPost, http.StatusBadRequest)
-			return
-		}
+		//if r.Method != http.MethodPost {
+		//	http.Error(w, `Ожидался метод `+http.MethodPost, http.StatusBadRequest)
+		//	return
+		//}
 		w.Header().Set("Content-Type", "text/plain")
 		err := r.ParseForm()
 		if err != nil {
@@ -149,10 +149,10 @@ type outURL struct {
 
 func setJSONLink() http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, `Ожидался метод `+http.MethodPost, http.StatusBadRequest)
-			return
-		}
+		//if r.Method != http.MethodPost {
+		//	http.Error(w, `Ожидался метод `+http.MethodPost, http.StatusBadRequest)
+		//	return
+		//}
 		w.Header().Set("Content-Type", "application/json")
 		err := r.ParseForm()
 		if err != nil {
