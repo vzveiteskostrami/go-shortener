@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
+	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -59,6 +62,7 @@ func mainRouter() chi.Router {
 
 	r.Handle(`/`, withLogging(setLink()))
 	r.Handle("/{shlink}", withLogging(getLink()))
+	r.Handle("/api/shorten", withLogging(setJSONLink()))
 	//r.Get("/{shlink}", getLink())
 	//r.Post("/", setLink)
 	return r
@@ -66,10 +70,10 @@ func mainRouter() chi.Router {
 
 func getLink() http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		//if r.Method != http.MethodPost {
-		//	http.Error(w, `Ожидался метод `+http.MethodPost, http.StatusBadRequest)
-		//	return
-		//}
+		if r.Method != http.MethodGet {
+			http.Error(w, `Ожидался метод `+http.MethodGet, http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "text/plain")
 		link := chi.URLParam(r, "shlink")
 
@@ -87,10 +91,10 @@ func getLink() http.Handler {
 
 func setLink() http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		//if r.Method != http.MethodGet {
-		//	http.Error(w, `Ожидался метод `+http.MethodGet, http.StatusBadRequest)
-		//	return
-		//}
+		if r.Method != http.MethodPost {
+			http.Error(w, `Ожидался метод `+http.MethodPost, http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "text/plain")
 		err := r.ParseForm()
 		if err != nil {
@@ -131,6 +135,61 @@ func setLink() http.Handler {
 
 			w.Write([]byte(config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + surl))
 		}
+	}
+	return http.HandlerFunc(fn)
+}
+
+type inURL struct {
+	URL string `json:"url"`
+}
+
+type outURL struct {
+	Result string `json:"result"`
+}
+
+func setJSONLink() http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `Ожидался метод `+http.MethodPost, http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		var url inURL
+		if err := json.NewDecoder(r.Body).Decode(&url); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if IsNil(url.URL) || url.URL == `` {
+			http.Error(w, `Не указан URL`, http.StatusBadRequest)
+			return
+		}
+
+		var surl outURL
+		lockCounter.Lock()
+		surl.Result = strconv.FormatInt(currURLNum, 36)
+		currURLNum++
+		lockCounter.Unlock()
+		if store == nil {
+			store = make(map[string]string)
+		}
+		store[surl.Result] = url.URL
+		w.WriteHeader(http.StatusCreated)
+
+		if config.Addresses.In == nil {
+			config.ReadData()
+		}
+
+		surl.Result = config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + surl.Result
+		var buf bytes.Buffer
+
+		jsonEncoder := json.NewEncoder(&buf)
+		jsonEncoder.Encode(surl)
+		w.Write(buf.Bytes())
 	}
 	return http.HandlerFunc(fn)
 }
@@ -194,4 +253,23 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	// записываем код статуса, используя оригинальный http.ResponseWriter
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode // захватываем код статуса
+}
+
+func IsNil(obj interface{}) bool {
+	if obj == nil {
+		return true
+	}
+
+	objValue := reflect.ValueOf(obj)
+	// проверяем, что тип значения ссылочный, то есть в принципе может быть равен nil
+	if objValue.Kind() != reflect.Ptr {
+		return false
+	}
+	// проверяем, что значение равно nil
+	//  важно, что IsNil() вызывает панику, если value не является ссылочным типом. Поэтому всегда проверяйте на Kind()
+	if objValue.IsNil() {
+		return true
+	}
+
+	return false
 }

@@ -71,6 +71,37 @@ func Test_getLink(t *testing.T) {
 	}
 }
 
+func Test_setJSONLink(t *testing.T) {
+	tests := []struct {
+		method       string
+		url          string
+		expectedCode int
+		body         string
+		expectedBody string
+	}{
+		//{method: http.MethodGet, url: "/1234", expectedCode: http.StatusBadRequest, body: "", expectedBody: `Ожидался метод ` + http.MethodPost},
+		//{method: http.MethodPut, url: "/", expectedCode: http.StatusBadRequest, body: "", expectedBody: `Ожидался метод ` + http.MethodPost},
+		//{method: http.MethodDelete, url: "/", expectedCode: http.StatusBadRequest, body: "", expectedBody: `Ожидался метод ` + http.MethodPost},
+		{method: http.MethodPost, url: "/api/shorten", expectedCode: http.StatusCreated, body: `{"url": "www.yandex.ru"}`, expectedBody: `{"result":"http://127.0.0.1:8080/0"}`},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.method, func(t *testing.T) {
+			s := strings.NewReader(tc.body)
+			r := httptest.NewRequest(tc.method, tc.url, s)
+			w := httptest.NewRecorder()
+
+			h := setJSONLink()
+			h.ServeHTTP(w, r)
+
+			assert.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
+			if tc.expectedBody != "" {
+				assert.Equal(t, tc.expectedBody, strings.Trim(w.Body.String(), " \n\r"), "Тело ответа не совпадает с ожидаемым")
+			}
+		})
+	}
+}
+
 /*
 func Test_main(t *testing.T) {
 	tests := []struct {
