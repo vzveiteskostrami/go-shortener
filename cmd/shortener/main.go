@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -18,12 +23,19 @@ import (
 	"go.uber.org/zap"
 )
 
+type storageURL struct {
+	UUID        int64  `json:"uuid"`
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
 var (
 	currURLNum  int64
-	store       map[string]string
+	store       map[string]storageURL
 	lockCounter sync.Mutex
 	srv         *http.Server
 	sugar       zap.SugaredLogger
+	fStore      *os.File
 )
 
 func main() {
@@ -38,19 +50,35 @@ func main() {
 
 	config.ReadData()
 	currURLNum = 0
-	store = make(map[string]string)
+	store = make(map[string]storageURL)
 
+	fmt.Println(config.FileStorage.FileName)
 	srv = &http.Server{
 		Addr:        config.Addresses.In.Host + ":" + strconv.Itoa(config.Addresses.In.Port),
 		Handler:     mainRouter(),
 		IdleTimeout: time.Second * 1,
 	}
 
+	if config.FileStorage.FileName != `` {
+		s := filepath.Dir(config.FileStorage.FileName)
+		if s != `` {
+			err = os.MkdirAll(s, fs.ModeDir)
+			if err != nil {
+				sugar.Panic(err)
+			}
+		}
+		fStore, err = os.OpenFile(config.FileStorage.FileName, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+		if err != nil {
+			sugar.Panic(err)
+		}
+		defer fStore.Close()
+		readStoredData()
+	}
+
 	sugar.Infow(
 		"Starting server",
 		"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
 	)
-
 	sugar.Fatal(srv.ListenAndServe())
 }
 
@@ -79,13 +107,13 @@ func getLink() http.Handler {
 		w.Header().Set("Content-Type", "text/plain")
 		link := chi.URLParam(r, "shlink")
 
-		url := store[link]
-		if url == "" {
+		url, ok := store[link]
+		if !ok {
 			http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
 			return
 		}
 
-		w.Header().Set("Location", url)
+		w.Header().Set("Location", url.OriginalURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
 	return http.HandlerFunc(fn)
@@ -122,20 +150,19 @@ func setLink() http.Handler {
 			w.Write([]byte("Сервер выключен"))
 			go closeServer()
 		} else {
-			surl := strconv.FormatInt(currURLNum, 36)
+			currNum := currURLNum
 			currURLNum++
 			lockCounter.Unlock()
-			if store == nil {
-				store = make(map[string]string)
-			}
-			store[surl] = url
+			saveLink(storageURL{OriginalURL: url,
+				UUID:     currNum,
+				ShortURL: strconv.FormatInt(currNum, 36)})
 			w.WriteHeader(http.StatusCreated)
 
 			if config.Addresses.In == nil {
 				config.ReadData()
 			}
 
-			w.Write([]byte(config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + surl))
+			w.Write([]byte(makeURL(currNum)))
 		}
 	}
 	return http.HandlerFunc(fn)
@@ -173,21 +200,21 @@ func setJSONLink() http.Handler {
 
 		var surl outURL
 		lockCounter.Lock()
-		surl.Result = strconv.FormatInt(currURLNum, 36)
+		currNum := currURLNum
 		currURLNum++
 		lockCounter.Unlock()
-		if store == nil {
-			store = make(map[string]string)
-		}
-		store[surl.Result] = url.URL
+		saveLink(storageURL{UUID: currNum,
+			OriginalURL: url.URL,
+			ShortURL:    strconv.FormatInt(currNum, 36)})
 		w.WriteHeader(http.StatusCreated)
 
 		if config.Addresses.In == nil {
 			config.ReadData()
 		}
 
-		surl.Result = config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + surl.Result
 		var buf bytes.Buffer
+
+		surl.Result = makeURL(currNum)
 
 		jsonEncoder := json.NewEncoder(&buf)
 		jsonEncoder.Encode(surl)
@@ -321,4 +348,53 @@ type gzipWriter struct {
 func (w gzipWriter) Write(b []byte) (int, error) {
 	// w.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
 	return w.Writer.Write(b)
+}
+
+func readStoredData() error {
+
+	if IsNil(fStore) {
+		return nil
+	}
+
+	scanner := bufio.NewScanner(fStore)
+	sho := storageURL{}
+	var err error
+
+	if store == nil {
+		store = make(map[string]storageURL)
+	}
+
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+		data := scanner.Bytes()
+		err = json.Unmarshal(data, &sho)
+		if err != nil {
+			return err
+		}
+		store[sho.ShortURL] = sho
+		if currURLNum <= sho.UUID {
+			currURLNum = sho.UUID + 1
+		}
+	}
+	return nil
+}
+
+func saveLink(sho storageURL) {
+	if store == nil {
+		store = make(map[string]storageURL)
+	}
+	store[sho.ShortURL] = sho
+
+	if fStore == nil {
+		return
+	}
+
+	data, _ := json.Marshal(&sho)
+	// добавляем перенос строки
+	data = append(data, '\n')
+	_, _ = fStore.Write(data)
+}
+
+func makeURL(num int64) string {
+	return config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + strconv.FormatInt(num, 36)
 }
