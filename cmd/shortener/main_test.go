@@ -7,15 +7,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vzveiteskostrami/go-shortener/internal/config"
-	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
 	"github.com/vzveiteskostrami/go-shortener/internal/surl"
 )
 
 func Test_setLink(t *testing.T) {
-	config.ReadData()
-	surl.SetURLNum(dbf.DBFInit())
-	defer dbf.DBFClose()
+	//config.ReadData()
+	//surl.SetURLNum(dbf.DBFInit())
+	//defer dbf.DBFClose()
 
 	tests := []struct {
 		method       string
@@ -48,9 +46,9 @@ func Test_setLink(t *testing.T) {
 }
 
 func Test_getLink(t *testing.T) {
-	config.ReadData()
-	surl.SetURLNum(dbf.DBFInit())
-	defer dbf.DBFClose()
+	//config.ReadData()
+	///surl.SetURLNum(dbf.DBFInit())
+	//defer dbf.DBFClose()
 	tests := []struct {
 		method       string
 		url          string
@@ -82,9 +80,9 @@ func Test_getLink(t *testing.T) {
 }
 
 func Test_setJSONLink(t *testing.T) {
-	config.ReadData()
-	surl.SetURLNum(dbf.DBFInit())
-	defer dbf.DBFClose()
+	//config.ReadData()
+	//surl.SetURLNum(dbf.DBFInit())
+	//defer dbf.DBFClose()
 	tests := []struct {
 		method       string
 		url          string
