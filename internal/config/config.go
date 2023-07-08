@@ -110,8 +110,12 @@ func ReadData() {
 	s = os.Getenv("FILE_STORAGE_PATH")
 	if s != "" {
 		FileStorage.FileName = s
-		if err != nil {
-			fmt.Println("Неудачный парсинг переменной окружения FILE_STORAGE_PATH")
-		}
 	}
+}
+
+func MakeURL(num int64) string {
+	//if Addresses.In == nil {
+	//	ReadData()
+	//}
+	return Addresses.Out.Host + ":" + strconv.Itoa(Addresses.Out.Port) + "/" + strconv.FormatInt(num, 36)
 }
