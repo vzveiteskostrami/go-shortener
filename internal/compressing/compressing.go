@@ -37,10 +37,16 @@ func GZIPHandle(next http.Handler) http.Handler {
 			io.WriteString(w, err.Error())
 			return
 		}
-		defer gz.Close()
+
+		gwr := gzipWriter{ResponseWriter: w, Writer: gz}
+		defer func() {
+			if gwr.Header().Get("Content-Encoding") == "gzip" {
+				gz.Close()
+			}
+		}()
 
 		// передаём обработчику страницы переменную типа gzipWriter для вывода данных
-		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+		next.ServeHTTP(gwr, r)
 	})
 }
 
