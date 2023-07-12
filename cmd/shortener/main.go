@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/vzveiteskostrami/go-shortener/internal/compressing"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
-	"github.com/vzveiteskostrami/go-shortener/internal/cpress"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
-	"github.com/vzveiteskostrami/go-shortener/internal/surl"
+	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -22,7 +22,7 @@ func main() {
 	logging.LoggingInit()
 	defer logging.LoggingSync()
 	config.ReadData()
-	surl.SetURLNum(dbf.DBFInit())
+	shorturl.SetURLNum(dbf.DBFInit())
 	defer dbf.DBFClose()
 
 	srv = &http.Server{
@@ -40,15 +40,12 @@ func main() {
 
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
-	r.Use(cpress.GZIPHandle)
+	r.Use(compressing.GZIPHandle)
 	r.Use(logging.WithLogging)
 
-	r.Post("/", surl.SetLinkf)
-	r.Get("/{shlink}", surl.GetLinkf)
-	r.Post("/api/shorten", surl.SetJSONLinkf)
+	r.Post("/", shorturl.SetLinkf)
+	r.Get("/{shlink}", shorturl.GetLinkf)
+	r.Post("/api/shorten", shorturl.SetJSONLinkf)
 
-	//r.Handle(`/`, cpress.GZIPHandle(logging.WithLogging(setLink())))
-	//r.Handle("/{shlink}", cpress.GZIPHandle(logging.WithLogging(getLink())))
-	//r.Handle("/api/shorten", cpress.GZIPHandle(logging.WithLogging(setJSONLink())))
 	return r
 }

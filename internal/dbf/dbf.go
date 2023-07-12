@@ -55,7 +55,7 @@ func readStoredData() int64 {
 	}
 
 	scanner := bufio.NewScanner(fStore)
-	sho := StorageURL{}
+	storageURLItem := StorageURL{}
 	var err error
 	var nextNum int64 = 0
 
@@ -66,13 +66,13 @@ func readStoredData() int64 {
 	for scanner.Scan() {
 		//fmt.Println(scanner.Text())
 		data := scanner.Bytes()
-		err = json.Unmarshal(data, &sho)
+		err = json.Unmarshal(data, &storageURLItem)
 		if err != nil {
 			logging.S().Panic(err)
 		}
-		store[sho.ShortURL] = sho
-		if nextNum <= sho.UUID {
-			nextNum = sho.UUID + 1
+		store[storageURLItem.ShortURL] = storageURLItem
+		if nextNum <= storageURLItem.UUID {
+			nextNum = storageURLItem.UUID + 1
 		}
 	}
 	return nextNum

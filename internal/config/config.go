@@ -112,10 +112,3 @@ func ReadData() {
 		FileStorage.FileName = s
 	}
 }
-
-func MakeURL(num int64) string {
-	if Addresses.In == nil {
-		ReadData()
-	}
-	return Addresses.Out.Host + ":" + strconv.Itoa(Addresses.Out.Port) + "/" + strconv.FormatInt(num, 36)
-}

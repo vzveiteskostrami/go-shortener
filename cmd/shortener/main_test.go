@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vzveiteskostrami/go-shortener/internal/surl"
+	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
 )
 
 func Test_setLink(t *testing.T) {
@@ -34,7 +34,7 @@ func Test_setLink(t *testing.T) {
 			r := httptest.NewRequest(tc.method, tc.url, s)
 			w := httptest.NewRecorder()
 
-			h := surl.SetLink()
+			h := shorturl.SetLink()
 			h.ServeHTTP(w, r)
 
 			assert.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
@@ -68,7 +68,7 @@ func Test_getLink(t *testing.T) {
 			r := httptest.NewRequest(tc.method, tc.url, s)
 			w := httptest.NewRecorder()
 
-			h := surl.GetLink()
+			h := shorturl.GetLink()
 			h.ServeHTTP(w, r)
 
 			assert.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
@@ -102,7 +102,7 @@ func Test_setJSONLink(t *testing.T) {
 			r := httptest.NewRequest(tc.method, tc.url, s)
 			w := httptest.NewRecorder()
 
-			h := surl.SetJSONLink()
+			h := shorturl.SetJSONLink()
 			h.ServeHTTP(w, r)
 
 			assert.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")

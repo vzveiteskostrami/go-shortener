@@ -1,4 +1,4 @@
-package cpress
+package compressing
 
 import (
 	"compress/gzip"
@@ -19,13 +19,12 @@ func GZIPHandle(next http.Handler) http.Handler {
 			r.Body = gzp
 			defer gzp.Close()
 		}
-		ct := w.Header().Get("Content-Type")
+
 		// проверяем, что клиент поддерживает gzip-сжатие
 		// это упрощённый пример. В реальном приложении следует проверять все
 		// значения r.Header.Values("Accept-Encoding") и разбирать строку
 		// на составные части, чтобы избежать неожиданных результатов
-		if !(strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") &&
-			(ct == "application/json" || ct == "text/html")) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			// если gzip не поддерживается, передаём управление
 			// дальше без изменений
 			next.ServeHTTP(w, r)
@@ -40,7 +39,6 @@ func GZIPHandle(next http.Handler) http.Handler {
 		}
 		defer gz.Close()
 
-		w.Header().Set("Content-Encoding", "gzip")
 		// передаём обработчику страницы переменную типа gzipWriter для вывода данных
 		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
@@ -51,7 +49,19 @@ type gzipWriter struct {
 	Writer io.Writer
 }
 
-func (w gzipWriter) Write(b []byte) (int, error) {
-	// w.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
-	return w.Writer.Write(b)
+func (gw gzipWriter) Write(b []byte) (int, error) {
+	if gw.Header().Get("Content-Encoding") == "gzip" {
+		// gw.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
+		return gw.Writer.Write(b)
+	} else {
+		return gw.ResponseWriter.Write(b)
+	}
+}
+
+func (gw gzipWriter) WriteHeader(statusCode int) {
+	ct := gw.Header().Get("Content-Type")
+	if ct == "application/json" || ct == "text/html" {
+		gw.Header().Set("Content-Encoding", "gzip")
+	}
+	gw.ResponseWriter.WriteHeader(statusCode)
 }

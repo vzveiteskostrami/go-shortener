@@ -1,4 +1,4 @@
-package surl
+package shorturl
 
 import (
 	"bytes"
@@ -69,7 +69,7 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 		UUID:     currNum,
 		ShortURL: strconv.FormatInt(currNum, 36)})
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(config.MakeURL(currNum)))
+	w.Write([]byte(makeURL(currNum)))
 }
 
 type inURL struct {
@@ -107,9 +107,16 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 		ShortURL:    strconv.FormatInt(currNum, 36)})
 	w.WriteHeader(http.StatusCreated)
 	var buf bytes.Buffer
-	surl.Result = config.MakeURL(currNum)
+	surl.Result = makeURL(currNum)
 
 	jsonEncoder := json.NewEncoder(&buf)
 	jsonEncoder.Encode(surl)
 	w.Write(buf.Bytes())
+}
+
+func makeURL(num int64) string {
+	if config.Addresses.In == nil {
+		config.ReadData()
+	}
+	return config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + strconv.FormatInt(num, 36)
 }
