@@ -15,13 +15,12 @@ import (
 )
 
 var (
-	currURLNum  int64
+	currURLNum  int64 = 0
 	lockCounter sync.Mutex
 )
 
 func GetLink() http.Handler {
-	fn := GetLinkf
-	return http.HandlerFunc(fn)
+	return http.HandlerFunc(GetLinkf)
 }
 
 func SetURLNum(num int64) {
@@ -43,8 +42,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 }
 
 func SetLink() http.Handler {
-	fn := SetLinkf
-	return http.HandlerFunc(fn)
+	return http.HandlerFunc(SetLinkf)
 }
 
 func SetLinkf(w http.ResponseWriter, r *http.Request) {
@@ -81,8 +79,7 @@ type outURL struct {
 }
 
 func SetJSONLink() http.Handler {
-	fn := SetJSONLinkf
-	return http.HandlerFunc(fn)
+	return http.HandlerFunc(SetJSONLinkf)
 }
 
 func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {

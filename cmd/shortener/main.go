@@ -46,6 +46,7 @@ func mainRouter() chi.Router {
 	r.Post("/", shorturl.SetLinkf)
 	r.Get("/{shlink}", shorturl.GetLinkf)
 	r.Post("/api/shorten", shorturl.SetJSONLinkf)
+	//r.Get("/ping", dbf.PingDBf)
 
 	return r
 }
