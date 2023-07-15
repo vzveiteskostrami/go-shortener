@@ -1,7 +1,6 @@
 package config
 
 import (
-	"database/sql"
 	"errors"
 	"flag"
 	"fmt"
@@ -33,7 +32,6 @@ func (na *NetAddress) Set(flagValue string) error {
 type StorageAttr struct {
 	FileName  string
 	DBConnect string
-	DB        *sql.DB
 }
 
 func getAddrAndPort(s string) (string, int, error) {
@@ -75,8 +73,6 @@ func ReadData() {
 	Addresses.Out.Host = "http://127.0.0.1"
 	Addresses.Out.Port = 8080
 
-	Storage.DB = nil
-
 	_ = flag.Value(Addresses.In)
 	flag.Var(Addresses.In, "a", "In net address host:port")
 	_ = flag.Value(Addresses.Out)
@@ -112,4 +108,5 @@ func ReadData() {
 	if s != "" {
 		Storage.DBConnect = s
 	}
+	Storage.DBConnect = "host=127.0.0.1 port=5432 user=videos password=masterkey dbname=videos sslmode=disable"
 }
