@@ -119,6 +119,9 @@ func readStoredData(mode int8) int64 {
 		}
 
 		rows, err := db.QueryContext(context.Background(), "SELECT UUID,SHORTURL,ORIGINALURL from urlstore order by uuid;")
+		if rows.Err() != nil {
+			logging.S().Panic(rows.Err())
+		}
 		if err != nil {
 			logging.S().Panic(err)
 		}
@@ -164,6 +167,9 @@ func FindLink(link string) (StorageURL, bool) {
 	if db != nil {
 		storageURLItem := StorageURL{}
 		rows, err := db.QueryContext(context.Background(), "SELECT UUID,SHORTURL,ORIGINALURL from urlstore WHERE uuid=$1;", link)
+		if rows.Err() != nil {
+			logging.S().Panic(rows.Err())
+		}
 		if err != nil {
 			logging.S().Panic(err)
 		}
