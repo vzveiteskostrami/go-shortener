@@ -2,6 +2,7 @@ package dbf
 
 import (
 	"bufio"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -29,7 +30,8 @@ var (
 )
 
 func DBFInit() int64 {
-	var nextNum int64 = 0
+	var nextNumFile int64 = 0
+	var nextNumDB int64 = 0
 	if config.Storage.FileName != "" {
 		var err error
 		s := filepath.Dir(config.Storage.FileName)
@@ -43,7 +45,7 @@ func DBFInit() int64 {
 		if err != nil {
 			logging.S().Panic(err)
 		}
-		nextNum = readStoredData()
+		nextNumFile = readStoredData()
 		logging.S().Infof("Открыт файл %s для записи и чтения", config.Storage.FileName)
 	}
 
@@ -61,9 +63,17 @@ func DBFInit() int64 {
 			logging.S().Panic(err)
 		}
 		logging.S().Infof("Установлено соединение с %s", config.Storage.DBConnect)
+		nextNumDB, err = tableInitData()
+		if err != nil {
+			logging.S().Panic(err)
+		}
 	}
 
-	return nextNum
+	if nextNumDB > nextNumFile {
+		return nextNumDB
+	} else {
+		return nextNumFile
+	}
 }
 
 func DBFClose() {
@@ -139,4 +149,36 @@ func PingDBf(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func tableInitData() (int64, error) {
+	if db == nil {
+		return -1, errors.New("база данных не инициализирована")
+	}
+	_, err := db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS urlstore(UUID bigint NOT NULL,SHORTURL character varying(1000) NOT NULL,ORIGINALURL character varying(1000) NOT NULL);")
+	if err != nil {
+		return -1, err
+	}
+	logging.S().Infof("Таблица URLSTORE либо существовала, либо создана")
+
+	var mx sql.NullInt64
+
+	row := db.QueryRowContext(context.Background(), "SELECT MAX(UUID) as MX FROM urlstore;")
+	if row.Err() != nil {
+		return -1, row.Err()
+	}
+
+	if err = row.Scan(&mx); err != nil {
+		if err == sql.ErrNoRows {
+			return 0, nil
+		} else {
+			return -1, err
+		}
+	}
+
+	if mx.Valid {
+		return mx.Int64 + 1, nil
+	} else {
+		return 0, nil
+	}
 }

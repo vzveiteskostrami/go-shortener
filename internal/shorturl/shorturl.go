@@ -11,7 +11,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
-	"github.com/vzveiteskostrami/go-shortener/internal/misc"
 )
 
 var (
@@ -89,7 +88,7 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if misc.IsNil(url.URL) || url.URL == "" {
+	if url.URL == "" {
 		http.Error(w, `Не указан URL`, http.StatusBadRequest)
 		return
 	}
