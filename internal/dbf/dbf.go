@@ -32,7 +32,7 @@ var (
 func DBFInit() int64 {
 	var nextNumFile int64 = 0
 	var nextNumDB int64 = 0
-	if config.Storage.FileName != "" {
+	if config.Storage.FileName != "" && config.Storage.DBConnect == "" {
 		var err error
 		s := filepath.Dir(config.Storage.FileName)
 		if s != "" {
@@ -45,7 +45,7 @@ func DBFInit() int64 {
 		if err != nil {
 			logging.S().Panic(err)
 		}
-		nextNumFile = readStoredData()
+		nextNumFile = readStoredData(0)
 		logging.S().Infof("Открыт файл %s для записи и чтения", config.Storage.FileName)
 	}
 
@@ -67,6 +67,7 @@ func DBFInit() int64 {
 		if err != nil {
 			logging.S().Panic(err)
 		}
+		//_ = readStoredData(1)
 	}
 
 	if nextNumDB > nextNumFile {
@@ -85,54 +86,102 @@ func DBFClose() {
 	}
 }
 
-func readStoredData() int64 {
-
-	if misc.IsNil(fStore) {
-		logging.S().Panic(errors.New("не инициализировано"))
-	}
-
-	scanner := bufio.NewScanner(fStore)
-	storageURLItem := StorageURL{}
+func readStoredData(mode int8) int64 {
 	var err error
 	var nextNum int64 = 0
+	storageURLItem := StorageURL{}
 
 	if store == nil {
 		store = make(map[string]StorageURL)
 	}
 
-	for scanner.Scan() {
-		data := scanner.Bytes()
-		err = json.Unmarshal(data, &storageURLItem)
+	if mode == 0 {
+		if misc.IsNil(fStore) {
+			logging.S().Panic(errors.New("не инициализировано"))
+		}
+
+		scanner := bufio.NewScanner(fStore)
+
+		for scanner.Scan() {
+			data := scanner.Bytes()
+			err = json.Unmarshal(data, &storageURLItem)
+			if err != nil {
+				logging.S().Panic(err)
+			}
+			store[storageURLItem.ShortURL] = storageURLItem
+			if nextNum <= storageURLItem.UUID {
+				nextNum = storageURLItem.UUID + 1
+			}
+		}
+	} else {
+		if misc.IsNil(db) {
+			logging.S().Panic(errors.New("не инициализировано"))
+		}
+
+		rows, err := db.QueryContext(context.Background(), "SELECT UUID,SHORTURL,ORIGINALURL from urlstore order by uuid;")
 		if err != nil {
 			logging.S().Panic(err)
 		}
-		store[storageURLItem.ShortURL] = storageURLItem
-		if nextNum <= storageURLItem.UUID {
-			nextNum = storageURLItem.UUID + 1
+		defer rows.Close()
+
+		for rows.Next() {
+			err = rows.Scan(&storageURLItem.UUID, &storageURLItem.ShortURL, &storageURLItem.OriginalURL)
+			if err != nil {
+				logging.S().Panic(err)
+			}
+			store[storageURLItem.ShortURL] = storageURLItem
+			if nextNum <= storageURLItem.UUID {
+				nextNum = storageURLItem.UUID + 1
+			}
 		}
 	}
 	return nextNum
 }
 
 func DBFSaveLink(storageURLItem StorageURL) {
-	if store == nil {
-		store = make(map[string]StorageURL)
-	}
-	store[storageURLItem.ShortURL] = storageURLItem
+	if fStore != nil {
+		if store == nil {
+			store = make(map[string]StorageURL)
+		}
 
-	if fStore == nil {
-		return
+		store[storageURLItem.ShortURL] = storageURLItem
+		data, _ := json.Marshal(&storageURLItem)
+		// добавляем перенос строки
+		data = append(data, '\n')
+		_, _ = fStore.Write(data)
+	} else if db != nil {
+		_, err := db.ExecContext(context.Background(), "INSERT INTO urlstore (UUID,SHORTURL,ORIGINALURL) VALUES ($1,$2,$3);",
+			storageURLItem.UUID,
+			storageURLItem.ShortURL,
+			storageURLItem.OriginalURL)
+		if err != nil {
+			logging.S().Panic(err)
+		}
 	}
-
-	data, _ := json.Marshal(&storageURLItem)
-	// добавляем перенос строки
-	data = append(data, '\n')
-	_, _ = fStore.Write(data)
 }
 
 func FindLink(link string) (StorageURL, bool) {
-	url, ok := store[link]
-	return url, ok
+	if db != nil {
+		storageURLItem := StorageURL{}
+		rows, err := db.QueryContext(context.Background(), "SELECT UUID,SHORTURL,ORIGINALURL from urlstore WHERE uuid=$1;", link)
+		if err != nil {
+			logging.S().Panic(err)
+		}
+		defer rows.Close()
+
+		ok := false
+		for !ok && rows.Next() {
+			err = rows.Scan(&storageURLItem.UUID, &storageURLItem.ShortURL, &storageURLItem.OriginalURL)
+			if err != nil {
+				logging.S().Panic(err)
+			}
+			ok = true
+		}
+		return storageURLItem, ok
+	} else {
+		url, ok := store[link]
+		return url, ok
+	}
 }
 
 func PingDBf(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +209,6 @@ func tableInitData() (int64, error) {
 		return -1, err
 	}
 	logging.S().Infof("Таблица URLSTORE либо существовала, либо создана")
-
 	var mx sql.NullInt64
 
 	row := db.QueryRowContext(context.Background(), "SELECT MAX(UUID) as MX FROM urlstore;")
