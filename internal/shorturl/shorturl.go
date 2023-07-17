@@ -30,7 +30,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
 
-	url, ok := dbf.FindLink(link)
+	url, ok := dbf.FindLink(link, true)
 	if !ok {
 		http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
 		return
@@ -59,14 +59,20 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lockCounter.Lock()
-	currNum := currURLNum
-	currURLNum++
-	lockCounter.Unlock()
-	dbf.DBFSaveLink(dbf.StorageURL{OriginalURL: url,
-		UUID:     currNum,
-		ShortURL: strconv.FormatInt(currNum, 36)})
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(makeURL(currNum)))
+	defer lockCounter.Unlock()
+	nextNum := currURLNum
+
+	su := dbf.StorageURL{OriginalURL: url,
+		UUID:     nextNum,
+		ShortURL: strconv.FormatInt(nextNum, 36)}
+	dbf.DBFSaveLink(&su)
+	if su.UUID == nextNum {
+		w.WriteHeader(http.StatusCreated)
+		currURLNum++
+	} else {
+		w.WriteHeader(http.StatusConflict)
+	}
+	w.Write([]byte(makeURL(su.UUID)))
 }
 
 type inURL struct {
@@ -95,15 +101,21 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 
 	var surl outURL
 	lockCounter.Lock()
-	currNum := currURLNum
-	currURLNum++
-	lockCounter.Unlock()
-	dbf.DBFSaveLink(dbf.StorageURL{UUID: currNum,
+	defer lockCounter.Unlock()
+	nextNum := currURLNum
+
+	su := dbf.StorageURL{UUID: nextNum,
 		OriginalURL: url.URL,
-		ShortURL:    strconv.FormatInt(currNum, 36)})
-	w.WriteHeader(http.StatusCreated)
+		ShortURL:    strconv.FormatInt(nextNum, 36)}
+	dbf.DBFSaveLink(&su)
+	if su.UUID == nextNum {
+		w.WriteHeader(http.StatusCreated)
+		currURLNum++
+	} else {
+		w.WriteHeader(http.StatusConflict)
+	}
 	var buf bytes.Buffer
-	surl.Result = makeURL(currNum)
+	surl.Result = makeURL(su.UUID)
 
 	jsonEncoder := json.NewEncoder(&buf)
 	jsonEncoder.Encode(surl)
@@ -140,10 +152,13 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 		if url.OriginalURL != "" {
 			surl := outURL2{CorrelationID: url.CorrelationID, ShortURL: makeURL(currURLNum)}
 			surls = append(surls, surl)
-			dbf.DBFSaveLink(dbf.StorageURL{UUID: currURLNum,
+			su := dbf.StorageURL{UUID: currURLNum,
 				OriginalURL: url.OriginalURL,
-				ShortURL:    strconv.FormatInt(currURLNum, 36)})
-			currURLNum++
+				ShortURL:    strconv.FormatInt(currURLNum, 36)}
+			dbf.DBFSaveLink(&su)
+			if su.UUID == currURLNum {
+				currURLNum++
+			}
 		}
 	}
 
@@ -155,23 +170,6 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write(buf.Bytes())
-
-	/*
-		currURLNum++
-		dbf.DBFSaveLink(dbf.StorageURL{UUID: currNum,
-			OriginalURL: url.URL,
-			ShortURL:    strconv.FormatInt(currNum, 36)})
-
-		lockCounter.Unlock()
-
-		w.WriteHeader(http.StatusCreated)
-		var buf bytes.Buffer
-		surl.Result = makeURL(currNum)
-
-		jsonEncoder := json.NewEncoder(&buf)
-		jsonEncoder.Encode(surl)
-		w.Write(buf.Bytes())
-	*/
 }
 
 func makeURL(num int64) string {

@@ -24,9 +24,10 @@ type StorageURL struct {
 }
 
 var (
-	fStore *os.File
-	store  map[string]StorageURL
-	db     *sql.DB
+	ErrLinkAlreadyExists = errors.New("ссылка уже существует")
+	fStore               *os.File
+	store                map[string]StorageURL
+	db                   *sql.DB
 )
 
 func DBFInit() int64 {
@@ -141,37 +142,49 @@ func readStoredData(mode int8) int64 {
 	return nextNum
 }
 
-func DBFSaveLink(storageURLItem StorageURL) {
+func DBFSaveLink(storageURLItem *StorageURL) {
 	if fStore != nil {
 		if store == nil {
 			store = make(map[string]StorageURL)
 		}
 
-		store[storageURLItem.ShortURL] = storageURLItem
+		store[storageURLItem.ShortURL] = *storageURLItem
 		data, _ := json.Marshal(&storageURLItem)
 		// добавляем перенос строки
 		data = append(data, '\n')
 		_, _ = fStore.Write(data)
 	} else if db != nil {
-		_, err := db.ExecContext(context.Background(), "INSERT INTO urlstore (UUID,SHORTURL,ORIGINALURL) VALUES ($1,$2,$3);",
-			storageURLItem.UUID,
-			storageURLItem.ShortURL,
-			storageURLItem.OriginalURL)
-		if err != nil {
-			logging.S().Panic(err)
+		su, ok := FindLink(storageURLItem.OriginalURL, false)
+		if ok {
+			storageURLItem.UUID = su.UUID
+			storageURLItem.ShortURL = su.ShortURL
+		} else {
+			_, err := db.ExecContext(context.Background(), "INSERT INTO urlstore (UUID,SHORTURL,ORIGINALURL) VALUES ($1,$2,$3);",
+				storageURLItem.UUID,
+				storageURLItem.ShortURL,
+				storageURLItem.OriginalURL)
+			if err != nil {
+				logging.S().Panic(err)
+			}
 		}
 	}
 }
 
-func FindLink(link string) (StorageURL, bool) {
+func FindLink(link string, byLink bool) (StorageURL, bool) {
 	if db != nil {
 		storageURLItem := StorageURL{}
-		rows, err := db.QueryContext(context.Background(), "SELECT UUID,SHORTURL,ORIGINALURL from urlstore WHERE uuid=$1;", link)
-		if rows.Err() != nil {
-			logging.S().Panic(rows.Err())
+		sbody := ``
+		if byLink {
+			sbody = "SELECT UUID,SHORTURL,ORIGINALURL from urlstore WHERE uuid=$1;"
+		} else {
+			sbody = "SELECT UUID,SHORTURL,ORIGINALURL from urlstore WHERE originalurl=$1;"
 		}
+		rows, err := db.QueryContext(context.Background(), sbody, link)
 		if err != nil {
 			logging.S().Panic(err)
+		}
+		if rows.Err() != nil {
+			logging.S().Panic(rows.Err())
 		}
 		defer rows.Close()
 
@@ -210,7 +223,7 @@ func tableInitData() (int64, error) {
 	if db == nil {
 		return -1, errors.New("база данных не инициализирована")
 	}
-	_, err := db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS urlstore(UUID bigint NOT NULL,SHORTURL character varying(1000) NOT NULL,ORIGINALURL character varying(1000) NOT NULL);")
+	_, err := db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS urlstore(UUID bigint NOT NULL,SHORTURL character varying(1000) NOT NULL,ORIGINALURL character varying(1000) NOT NULL);CREATE UNIQUE INDEX IF NOT EXISTS urlstore1 ON urlstore (ORIGINALURL);")
 	if err != nil {
 		return -1, err
 	}
