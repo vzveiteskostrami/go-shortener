@@ -110,6 +110,70 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf.Bytes())
 }
 
+type inURL2 struct {
+	Correlation_id string `json:"correlation_id"`
+	Original_url   string `json:"original_url"`
+}
+
+type outURL2 struct {
+	Correlation_id string `json:"correlation_id"`
+	Short_url      string `json:"short_url"`
+}
+
+func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var urls []inURL2
+	if err := json.NewDecoder(r.Body).Decode(&urls); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(urls) == 0 {
+		http.Error(w, `Не указано никаких данных`, http.StatusBadRequest)
+		return
+	}
+
+	var surls []outURL2
+	lockCounter.Lock()
+	defer lockCounter.Unlock()
+	for _, url := range urls {
+		if url.Original_url != "" {
+			surl := outURL2{Correlation_id: url.Correlation_id, Short_url: makeURL(currURLNum)}
+			surls = append(surls, surl)
+			dbf.DBFSaveLink(dbf.StorageURL{UUID: currURLNum,
+				OriginalURL: url.Original_url,
+				ShortURL:    strconv.FormatInt(currURLNum, 36)})
+			currURLNum++
+		}
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(surls); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write(buf.Bytes())
+
+	/*
+		currURLNum++
+		dbf.DBFSaveLink(dbf.StorageURL{UUID: currNum,
+			OriginalURL: url.URL,
+			ShortURL:    strconv.FormatInt(currNum, 36)})
+
+		lockCounter.Unlock()
+
+		w.WriteHeader(http.StatusCreated)
+		var buf bytes.Buffer
+		surl.Result = makeURL(currNum)
+
+		jsonEncoder := json.NewEncoder(&buf)
+		jsonEncoder.Encode(surl)
+		w.Write(buf.Bytes())
+	*/
+}
+
 func makeURL(num int64) string {
 	if config.Addresses.In == nil {
 		config.ReadData()
