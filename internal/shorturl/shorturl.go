@@ -111,13 +111,13 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 }
 
 type inURL2 struct {
-	Correlation_id string `json:"correlation_id"`
-	Original_url   string `json:"original_url"`
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
 }
 
 type outURL2 struct {
-	Correlation_id string `json:"correlation_id"`
-	Short_url      string `json:"short_url"`
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
 }
 
 func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
@@ -137,11 +137,11 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 	lockCounter.Lock()
 	defer lockCounter.Unlock()
 	for _, url := range urls {
-		if url.Original_url != "" {
-			surl := outURL2{Correlation_id: url.Correlation_id, Short_url: makeURL(currURLNum)}
+		if url.OriginalURL != "" {
+			surl := outURL2{CorrelationID: url.CorrelationID, ShortURL: makeURL(currURLNum)}
 			surls = append(surls, surl)
 			dbf.DBFSaveLink(dbf.StorageURL{UUID: currURLNum,
-				OriginalURL: url.Original_url,
+				OriginalURL: url.OriginalURL,
 				ShortURL:    strconv.FormatInt(currURLNum, 36)})
 			currURLNum++
 		}
