@@ -11,17 +11,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
-	"github.com/vzveiteskostrami/go-shortener/internal/misc"
 )
 
 var (
-	currURLNum  int64
+	currURLNum  int64 = 0
 	lockCounter sync.Mutex
 )
 
 func GetLink() http.Handler {
-	fn := GetLinkf
-	return http.HandlerFunc(fn)
+	return http.HandlerFunc(GetLinkf)
 }
 
 func SetURLNum(num int64) {
@@ -32,7 +30,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
 
-	url, ok := dbf.FindLink(link)
+	url, ok := dbf.Store.FindLink(link, true)
 	if !ok {
 		http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
 		return
@@ -43,8 +41,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 }
 
 func SetLink() http.Handler {
-	fn := SetLinkf
-	return http.HandlerFunc(fn)
+	return http.HandlerFunc(SetLinkf)
 }
 
 func SetLinkf(w http.ResponseWriter, r *http.Request) {
@@ -62,14 +59,20 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lockCounter.Lock()
-	currNum := currURLNum
-	currURLNum++
-	lockCounter.Unlock()
-	dbf.DBFSaveLink(dbf.StorageURL{OriginalURL: url,
-		UUID:     currNum,
-		ShortURL: strconv.FormatInt(currNum, 36)})
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(makeURL(currNum)))
+	defer lockCounter.Unlock()
+	nextNum := currURLNum
+
+	su := dbf.StorageURL{OriginalURL: url,
+		UUID:     nextNum,
+		ShortURL: strconv.FormatInt(nextNum, 36)}
+	dbf.Store.DBFSaveLink(&su)
+	if su.UUID == nextNum {
+		w.WriteHeader(http.StatusCreated)
+		currURLNum++
+	} else {
+		w.WriteHeader(http.StatusConflict)
+	}
+	w.Write([]byte(makeURL(su.UUID)))
 }
 
 type inURL struct {
@@ -81,8 +84,7 @@ type outURL struct {
 }
 
 func SetJSONLink() http.Handler {
-	fn := SetJSONLinkf
-	return http.HandlerFunc(fn)
+	return http.HandlerFunc(SetJSONLinkf)
 }
 
 func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
@@ -92,25 +94,81 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if misc.IsNil(url.URL) || url.URL == "" {
+	if url.URL == "" {
 		http.Error(w, `Не указан URL`, http.StatusBadRequest)
 		return
 	}
 
 	var surl outURL
 	lockCounter.Lock()
-	currNum := currURLNum
-	currURLNum++
-	lockCounter.Unlock()
-	dbf.DBFSaveLink(dbf.StorageURL{UUID: currNum,
+	defer lockCounter.Unlock()
+	nextNum := currURLNum
+
+	su := dbf.StorageURL{UUID: nextNum,
 		OriginalURL: url.URL,
-		ShortURL:    strconv.FormatInt(currNum, 36)})
-	w.WriteHeader(http.StatusCreated)
+		ShortURL:    strconv.FormatInt(nextNum, 36)}
+	dbf.Store.DBFSaveLink(&su)
+	if su.UUID == nextNum {
+		w.WriteHeader(http.StatusCreated)
+		currURLNum++
+	} else {
+		w.WriteHeader(http.StatusConflict)
+	}
 	var buf bytes.Buffer
-	surl.Result = makeURL(currNum)
+	surl.Result = makeURL(su.UUID)
 
 	jsonEncoder := json.NewEncoder(&buf)
 	jsonEncoder.Encode(surl)
+	w.Write(buf.Bytes())
+}
+
+type inURL2 struct {
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
+}
+
+type outURL2 struct {
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
+}
+
+func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var urls []inURL2
+	if err := json.NewDecoder(r.Body).Decode(&urls); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(urls) == 0 {
+		http.Error(w, `Не указано никаких данных`, http.StatusBadRequest)
+		return
+	}
+
+	var surls []outURL2
+	lockCounter.Lock()
+	defer lockCounter.Unlock()
+	for _, url := range urls {
+		if url.OriginalURL != "" {
+			surl := outURL2{CorrelationID: url.CorrelationID, ShortURL: makeURL(currURLNum)}
+			surls = append(surls, surl)
+			su := dbf.StorageURL{UUID: currURLNum,
+				OriginalURL: url.OriginalURL,
+				ShortURL:    strconv.FormatInt(currURLNum, 36)}
+			dbf.Store.DBFSaveLink(&su)
+			if su.UUID == currURLNum {
+				currURLNum++
+			}
+		}
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(surls); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 	w.Write(buf.Bytes())
 }
 

@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	Addresses   InOutAddresses
-	FileStorage FileStorageAttr
+	Addresses InOutAddresses
+	Storage   StorageAttr
 )
 
 type NetAddress struct {
@@ -29,17 +29,9 @@ func (na *NetAddress) Set(flagValue string) error {
 	return err
 }
 
-type FileStorageAttr struct {
-	FileName string
-}
-
-func (fs *FileStorageAttr) String() string {
-	return fs.FileName
-}
-
-func (fs *FileStorageAttr) Set(fn string) error {
-	fs.FileName = fn
-	return nil
+type StorageAttr struct {
+	FileName  string
+	DBConnect string
 }
 
 func getAddrAndPort(s string) (string, int, error) {
@@ -81,34 +73,37 @@ func ReadData() {
 	Addresses.Out.Host = "http://127.0.0.1"
 	Addresses.Out.Port = 8080
 
-	FileStorage.FileName = `/tmp/short-url-db.json`
-
 	_ = flag.Value(Addresses.In)
 	flag.Var(Addresses.In, "a", "In net address host:port")
 	_ = flag.Value(Addresses.Out)
 	flag.Var(Addresses.Out, "b", "Out net address host:port")
-	_ = flag.Value(&FileStorage)
-	flag.Var(&FileStorage, "f", "Storage file name")
+	fn := flag.String("f", "/tmp/short-url-db.json", "Storage text file name")
+	dbc := flag.String("d", "", "Database connect string")
 
 	flag.Parse()
 
+	Storage.FileName = *fn
+	Storage.DBConnect = *dbc
+
 	var err error
-	s := os.Getenv("SERVER_ADDRESS")
-	if s != "" {
+	if s, ok := os.LookupEnv("SERVER_ADDRESS"); ok && s != "" {
 		Addresses.In.Host, Addresses.In.Port, err = getAddrAndPort(s)
 		if err != nil {
 			fmt.Println("Неудачный парсинг переменной окружения SERVER_ADDRESS")
 		}
 	}
-	s = os.Getenv("BASE_URL")
-	if s != "" {
+	if s, ok := os.LookupEnv("BASE_URL"); ok && s != "" {
 		Addresses.Out.Host, Addresses.In.Port, err = getAddrAndPort(s)
 		if err != nil {
 			fmt.Println("Неудачный парсинг переменной окружения BASE_URL")
 		}
 	}
-	s = os.Getenv("FILE_STORAGE_PATH")
-	if s != "" {
-		FileStorage.FileName = s
+	if s, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok && s != "" {
+		Storage.FileName = s
 	}
+	if s, ok := os.LookupEnv("DATABASE_DSN"); ok && s != "" {
+		Storage.DBConnect = s
+	}
+	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=videos password=masterkey dbname=videos sslmode=disable"
+	//Storage.FileName = ""
 }
