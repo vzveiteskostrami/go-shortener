@@ -22,8 +22,9 @@ func main() {
 	logging.LoggingInit()
 	defer logging.LoggingSync()
 	config.ReadData()
-	shorturl.SetURLNum(dbf.DBFInit())
-	defer dbf.DBFClose()
+	dbf.MakeStorage()
+	shorturl.SetURLNum(dbf.Store.DBFInit())
+	defer dbf.Store.DBFClose()
 
 	srv = &http.Server{
 		Addr:        config.Addresses.In.Host + ":" + strconv.Itoa(config.Addresses.In.Port),
@@ -47,7 +48,7 @@ func mainRouter() chi.Router {
 	r.Get("/{shlink}", shorturl.GetLinkf)
 	r.Post("/api/shorten", shorturl.SetJSONLinkf)
 	r.Post("/api/shorten/batch", shorturl.SetJSONBatchLinkf)
-	r.Get("/ping", dbf.PingDBf)
+	r.Get("/ping", dbf.Store.PingDBf)
 
 	return r
 }

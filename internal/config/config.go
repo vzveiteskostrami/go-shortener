@@ -86,27 +86,24 @@ func ReadData() {
 	Storage.DBConnect = *dbc
 
 	var err error
-	s := os.Getenv("SERVER_ADDRESS")
-	if s != "" {
+	if s, ok := os.LookupEnv("SERVER_ADDRESS"); ok && s != "" {
 		Addresses.In.Host, Addresses.In.Port, err = getAddrAndPort(s)
 		if err != nil {
 			fmt.Println("Неудачный парсинг переменной окружения SERVER_ADDRESS")
 		}
 	}
-	s = os.Getenv("BASE_URL")
-	if s != "" {
+	if s, ok := os.LookupEnv("BASE_URL"); ok && s != "" {
 		Addresses.Out.Host, Addresses.In.Port, err = getAddrAndPort(s)
 		if err != nil {
 			fmt.Println("Неудачный парсинг переменной окружения BASE_URL")
 		}
 	}
-	s = os.Getenv("FILE_STORAGE_PATH")
-	if s != "" {
+	if s, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok && s != "" {
 		Storage.FileName = s
 	}
-	s = os.Getenv("DATABASE_DSN")
-	if s != "" {
+	if s, ok := os.LookupEnv("DATABASE_DSN"); ok && s != "" {
 		Storage.DBConnect = s
 	}
 	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=videos password=masterkey dbname=videos sslmode=disable"
+	Storage.FileName = ""
 }

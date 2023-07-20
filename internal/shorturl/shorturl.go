@@ -30,7 +30,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
 
-	url, ok := dbf.FindLink(link, true)
+	url, ok := dbf.Store.FindLink(link, true)
 	if !ok {
 		http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
 		return
@@ -65,7 +65,7 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 	su := dbf.StorageURL{OriginalURL: url,
 		UUID:     nextNum,
 		ShortURL: strconv.FormatInt(nextNum, 36)}
-	dbf.DBFSaveLink(&su)
+	dbf.Store.DBFSaveLink(&su)
 	if su.UUID == nextNum {
 		w.WriteHeader(http.StatusCreated)
 		currURLNum++
@@ -107,7 +107,7 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 	su := dbf.StorageURL{UUID: nextNum,
 		OriginalURL: url.URL,
 		ShortURL:    strconv.FormatInt(nextNum, 36)}
-	dbf.DBFSaveLink(&su)
+	dbf.Store.DBFSaveLink(&su)
 	if su.UUID == nextNum {
 		w.WriteHeader(http.StatusCreated)
 		currURLNum++
@@ -155,7 +155,7 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 			su := dbf.StorageURL{UUID: currURLNum,
 				OriginalURL: url.OriginalURL,
 				ShortURL:    strconv.FormatInt(currURLNum, 36)}
-			dbf.DBFSaveLink(&su)
+			dbf.Store.DBFSaveLink(&su)
 			if su.UUID == currURLNum {
 				currURLNum++
 			}
