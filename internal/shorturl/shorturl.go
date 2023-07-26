@@ -201,11 +201,11 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	ownerValid := r.Context().Value(auth.CPownerValid)
-	if !ownerValid.(bool) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
+	//ownerValid := r.Context().Value(auth.CPownerValid)
+	//if !ownerValid.(bool) {
+	//	w.WriteHeader(http.StatusUnauthorized)
+	//	return
+	//}
 	var (
 		ownerID int64
 		urls    []dbf.StorageURL
