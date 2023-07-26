@@ -14,7 +14,7 @@ type ContextParam struct {
 
 type ContextParamName string
 
-const Context_completedKey ContextParamName = "completed"
+const ContextCompletedKey ContextParamName = "completed"
 
 var (
 	sugar  zap.SugaredLogger
@@ -82,7 +82,7 @@ func WithLogging(h http.Handler) http.Handler {
 		}
 
 		aa := ContextParam{Completed: true}
-		ctx := context.WithValue(r.Context(), Context_completedKey, aa)
+		ctx := context.WithValue(r.Context(), ContextCompletedKey, aa)
 		// точка, где выполняется внутренний хендлер
 		h.ServeHTTP(&lw, r.WithContext(ctx)) // обслуживание оригинального запроса
 
