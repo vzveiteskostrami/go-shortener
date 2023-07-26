@@ -23,8 +23,8 @@ type Claims struct {
 const SECRET_KEY = "pomidoryichesnok"
 
 var (
-	CP_ownerID    ContextParamName = "OwnerID"
-	CP_ownerValid ContextParamName = "OwnerValid"
+	CPownerID     ContextParamName = "OwnerID"
+	CPownerValid  ContextParamName = "OwnerValid"
 	NextOWNERID   int64            = 0
 	lockMakeToken sync.Mutex
 )
@@ -54,7 +54,7 @@ func AuthHandle(next http.Handler) http.Handler {
 			http.SetCookie(w, &http.Cookie{Name: "token", Value: token, HttpOnly: true})
 		}
 
-		c := context.WithValue(context.WithValue(r.Context(), CP_ownerID, ownerID), CP_ownerValid, ownerValid)
+		c := context.WithValue(context.WithValue(r.Context(), CPownerID, ownerID), CPownerValid, ownerValid)
 
 		next.ServeHTTP(w, r.WithContext(c))
 	})

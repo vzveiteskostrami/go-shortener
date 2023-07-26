@@ -77,7 +77,7 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 	defer lockCounter.Unlock()
 	nextNum := currURLNum
 
-	ownerID := r.Context().Value(auth.CP_ownerID)
+	ownerID := r.Context().Value(auth.CPownerID)
 
 	su := dbf.StorageURL{OriginalURL: url,
 		UUID:     nextNum,
@@ -122,7 +122,7 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 	defer lockCounter.Unlock()
 	nextNum := currURLNum
 
-	ownerID := r.Context().Value(auth.CP_ownerID)
+	ownerID := r.Context().Value(auth.CPownerID)
 
 	su := dbf.StorageURL{UUID: nextNum,
 		OriginalURL: url.URL,
@@ -170,7 +170,7 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 	lockCounter.Lock()
 	defer lockCounter.Unlock()
 
-	ownerID := r.Context().Value(auth.CP_ownerID)
+	ownerID := r.Context().Value(auth.CPownerID)
 
 	for _, url := range urls {
 		if *url.OriginalURL != "" {
@@ -201,7 +201,7 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	ownerValid := r.Context().Value(auth.CP_ownerValid)
+	ownerValid := r.Context().Value(auth.CPownerValid)
 	if !ownerValid.(bool) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -214,7 +214,7 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	completed := make(chan struct{})
 
 	go func() {
-		ownerID = r.Context().Value(auth.CP_ownerID).(int64)
+		ownerID = r.Context().Value(auth.CPownerID).(int64)
 		urls, err = dbf.Store.DBFGetOwnURLs(ownerID)
 		completed <- struct{}{}
 	}()
