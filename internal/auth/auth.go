@@ -20,7 +20,7 @@ type Claims struct {
 	OwnerID int64
 }
 
-const SECRET_KEY = "pomidoryichesnok"
+const SecretKey = "pomidoryichesnok"
 
 var (
 	CPownerID     ContextParamName = "OwnerID"
@@ -34,7 +34,7 @@ func AuthHandle(next http.Handler) http.Handler {
 		var ownerID int64 = 0
 		var token string
 		var ok bool
-		var ownerValid bool = true
+		ownerValid := true
 
 		cu, err := r.Cookie("token")
 
@@ -66,7 +66,7 @@ func getOwnerID(tokenString string) (int64, bool) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
-		return []byte(SECRET_KEY), nil
+		return []byte(SecretKey), nil
 	})
 
 	if err != nil {
@@ -92,7 +92,7 @@ func makeToken() (string, int64, error) {
 	})
 	NextOWNERID++
 
-	tokenString, err := token.SignedString([]byte(SECRET_KEY))
+	tokenString, err := token.SignedString([]byte(SecretKey))
 	if err != nil {
 		return "", -1, err
 	}
