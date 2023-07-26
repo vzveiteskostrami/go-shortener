@@ -93,7 +93,7 @@ func WithLogging(h http.Handler) http.Handler {
 
 		sugar.Infoln(
 			"uri:", r.RequestURI,
-			"method:", r.Method,
+			"method:", r.RequestURI, //r.Method,
 			"status:", responseData.status, http.StatusText(responseData.status),
 			"duration:", duration,
 			"size:", responseData.size,

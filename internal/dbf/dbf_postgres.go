@@ -101,7 +101,7 @@ func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 		}
 		items = append(items, item)
 	}
-
+	//d.printDBF()
 	return items, nil
 }
 
@@ -109,7 +109,7 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 	su, ok := d.FindLink(storageURLItem.OriginalURL, false)
 	if ok {
 		storageURLItem.UUID = su.UUID
-		storageURLItem.UUID = su.OWNERID
+		storageURLItem.OWNERID = su.OWNERID
 		storageURLItem.ShortURL = su.ShortURL
 	} else {
 		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (OWNERID,UUID,SHORTURL,ORIGINALURL) VALUES ($1,$2,$3,$4);",
@@ -121,6 +121,7 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 			logging.S().Panic(err)
 		}
 	}
+	//d.printDBF()
 }
 
 func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
@@ -148,6 +149,8 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 		}
 		ok = true
 	}
+
+	//d.printDBF()
 	return storageURLItem, ok
 }
 
@@ -166,3 +169,29 @@ func (d *PGStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 }
+
+/*
+func (d *PGStorage) printDBF() {
+	rows, err := d.db.QueryContext(context.Background(), "SELECT OWNERID,SHORTURL,ORIGINALURL from urlstore;")
+	if err != nil {
+		logging.S().Panic(err)
+	}
+	if rows.Err() != nil {
+		logging.S().Panic(rows.Err())
+	}
+	defer rows.Close()
+
+	var ow int64
+	var sho string
+	var fu string
+	logging.S().Infow("--------------")
+	for rows.Next() {
+		err = rows.Scan(&ow, &sho, &fu)
+		if err != nil {
+			logging.S().Panic(err)
+		}
+		logging.S().Infow("", "owher", strconv.FormatInt(ow, 10), "short", sho, "full", fu)
+	}
+	logging.S().Infow("`````````````")
+}
+*/
