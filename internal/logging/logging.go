@@ -1,11 +1,20 @@
 package logging
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
 )
+
+type ContextParam struct {
+	Completed bool
+}
+
+type ContextParamName string
+
+const Context_completedKey ContextParamName = "completed"
 
 var (
 	sugar  zap.SugaredLogger
@@ -72,8 +81,10 @@ func WithLogging(h http.Handler) http.Handler {
 			responseData:   responseData,
 		}
 
+		aa := ContextParam{Completed: true}
+		ctx := context.WithValue(r.Context(), Context_completedKey, aa)
 		// точка, где выполняется внутренний хендлер
-		h.ServeHTTP(&lw, r) // обслуживание оригинального запроса
+		h.ServeHTTP(&lw, r.WithContext(ctx)) // обслуживание оригинального запроса
 
 		// Since возвращает разницу во времени между start
 		// и моментом вызова Since. Таким образом можно посчитать
@@ -81,11 +92,12 @@ func WithLogging(h http.Handler) http.Handler {
 		duration := time.Since(start)
 
 		sugar.Infoln(
-			"uri", r.RequestURI,
-			"method", r.Method,
-			"status", responseData.status,
-			"duration", duration,
-			"size", responseData.size,
+			"uri:", r.RequestURI,
+			"method:", r.Method,
+			"status:", responseData.status, http.StatusText(responseData.status),
+			"duration:", duration,
+			"size:", responseData.size,
+			//"completed", ctx.Value(Context_completedKey),
 		)
 	}
 	// возвращаем функционально расширенный хендлер

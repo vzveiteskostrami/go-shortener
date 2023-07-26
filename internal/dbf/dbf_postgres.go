@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	_ "github.com/lib/pq"
+	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 )
@@ -43,22 +44,26 @@ func (d *PGStorage) DBFClose() {
 }
 
 func (d *PGStorage) tableInitData() (int64, error) {
+	auth.NextOWNERID = 0
 	if d.db == nil {
 		return -1, errors.New("база данных не инициализирована")
 	}
-	_, err := d.db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS urlstore(UUID bigint NOT NULL,SHORTURL character varying(1000) NOT NULL,ORIGINALURL character varying(1000) NOT NULL);CREATE UNIQUE INDEX IF NOT EXISTS urlstore1 ON urlstore (ORIGINALURL);")
+	_, err := d.db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS urlstore(OWNERID bigint not null,UUID bigint NOT NULL,SHORTURL character varying(1000) NOT NULL,ORIGINALURL character varying(1000) NOT NULL);CREATE UNIQUE INDEX IF NOT EXISTS urlstore1 ON urlstore (ORIGINALURL);")
 	if err != nil {
 		return -1, err
 	}
 	logging.S().Infof("Таблица URLSTORE либо существовала, либо создана")
-	var mx sql.NullInt64
+	var (
+		mxUUID    sql.NullInt64
+		mxOwnerID sql.NullInt64
+	)
 
-	row := d.db.QueryRowContext(context.Background(), "SELECT MAX(UUID) as MX FROM urlstore;")
+	row := d.db.QueryRowContext(context.Background(), "SELECT MAX(UUID),MAX(OWNERID) as MX FROM urlstore;")
 	if row.Err() != nil {
 		return -1, row.Err()
 	}
 
-	if err = row.Scan(&mx); err != nil {
+	if err = row.Scan(&mxUUID, &mxOwnerID); err != nil {
 		if err == sql.ErrNoRows {
 			return 0, nil
 		} else {
@@ -66,20 +71,49 @@ func (d *PGStorage) tableInitData() (int64, error) {
 		}
 	}
 
-	if mx.Valid {
-		return mx.Int64 + 1, nil
+	if mxOwnerID.Valid {
+		auth.NextOWNERID = mxOwnerID.Int64 + 1
+	}
+
+	if mxUUID.Valid {
+		return mxUUID.Int64 + 1, nil
 	} else {
 		return 0, nil
 	}
+}
+
+func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
+	rows, err := d.db.QueryContext(context.Background(), "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
+	if err != nil {
+		logging.S().Panic(err)
+	}
+	if rows.Err() != nil {
+		logging.S().Panic(rows.Err())
+	}
+	defer rows.Close()
+
+	items := make([]StorageURL, 0)
+	item := StorageURL{}
+	for rows.Next() {
+		err = rows.Scan(&item.ShortURL, &item.OriginalURL)
+		if err != nil {
+			logging.S().Panic(err)
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
 }
 
 func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 	su, ok := d.FindLink(storageURLItem.OriginalURL, false)
 	if ok {
 		storageURLItem.UUID = su.UUID
+		storageURLItem.UUID = su.OWNERID
 		storageURLItem.ShortURL = su.ShortURL
 	} else {
-		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (UUID,SHORTURL,ORIGINALURL) VALUES ($1,$2,$3);",
+		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (OWNERID,UUID,SHORTURL,ORIGINALURL) VALUES ($1,$2,$3,$4);",
+			storageURLItem.OWNERID,
 			storageURLItem.UUID,
 			storageURLItem.ShortURL,
 			storageURLItem.OriginalURL)
@@ -93,9 +127,9 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 	storageURLItem := StorageURL{}
 	sbody := ``
 	if byLink {
-		sbody = "SELECT UUID,SHORTURL,ORIGINALURL from urlstore WHERE shorturl=$1;"
+		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL from urlstore WHERE shorturl=$1;"
 	} else {
-		sbody = "SELECT UUID,SHORTURL,ORIGINALURL from urlstore WHERE originalurl=$1;"
+		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL from urlstore WHERE originalurl=$1;"
 	}
 	rows, err := d.db.QueryContext(context.Background(), sbody, link)
 	if err != nil {
@@ -108,7 +142,7 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 
 	ok := false
 	for !ok && rows.Next() {
-		err = rows.Scan(&storageURLItem.UUID, &storageURLItem.ShortURL, &storageURLItem.OriginalURL)
+		err = rows.Scan(&storageURLItem.OWNERID, &storageURLItem.UUID, &storageURLItem.ShortURL, &storageURLItem.OriginalURL)
 		if err != nil {
 			logging.S().Panic(err)
 		}

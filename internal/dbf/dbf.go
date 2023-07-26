@@ -25,9 +25,11 @@ type GSStorage interface {
 	DBFSaveLink(storageURLItem *StorageURL)
 	FindLink(link string, byLink bool) (StorageURL, bool)
 	PingDBf(w http.ResponseWriter, r *http.Request)
+	DBFGetOwnURLs(ownerID int64) ([]StorageURL, error)
 }
 
 type StorageURL struct {
+	OWNERID     int64  `json:"ownerid"`
 	UUID        int64  `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`

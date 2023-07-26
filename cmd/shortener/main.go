@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/compressing"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
@@ -41,14 +42,46 @@ func main() {
 
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
-	r.Use(compressing.GZIPHandle)
-	r.Use(logging.WithLogging)
 
-	r.Post("/", shorturl.SetLinkf)
-	r.Get("/{shlink}", shorturl.GetLinkf)
-	r.Post("/api/shorten", shorturl.SetJSONLinkf)
-	r.Post("/api/shorten/batch", shorturl.SetJSONBatchLinkf)
-	r.Get("/ping", dbf.Store.PingDBf)
+	r.Route("/api", func(r chi.Router) {
+		r.Use(compressing.GZIPHandle)
+		r.Use(logging.WithLogging)
+		r.Use(auth.AuthHandle)
+		r.Post("/shorten", shorturl.SetJSONLinkf)
+		r.Post("/shorten/batch", shorturl.SetJSONBatchLinkf)
+		r.Get("/user/urls", shorturl.GetOwnerURLsListf)
+	})
+
+	r.Route("/ping", func(r chi.Router) {
+		r.Use(logging.WithLogging)
+		r.Get("/", dbf.Store.PingDBf)
+	})
+
+	r.Route("/{shlink}", func(r chi.Router) {
+		r.Use(compressing.GZIPHandle)
+		r.Use(logging.WithLogging)
+		r.Get("/", shorturl.GetLinkf)
+	})
+
+	r.Route("/", func(r chi.Router) {
+		r.Use(compressing.GZIPHandle)
+		r.Use(logging.WithLogging)
+		r.Use(auth.AuthHandle)
+		r.Post("/", shorturl.SetLinkf)
+	})
+
+	/*
+		r.Use(compressing.GZIPHandle)
+		r.Use(logging.WithLogging)
+		r.Use(auth.AuthHandle)
+
+		r.Post("/", shorturl.SetLinkf)
+		r.Get("/{shlink}", shorturl.GetLinkf)
+		r.Post("/api/shorten", shorturl.SetJSONLinkf)
+		r.Post("/api/shorten/batch", shorturl.SetJSONBatchLinkf)
+		r.Get("/ping", dbf.Store.PingDBf)
+		r.Get("/co", cotik)
+	*/
 
 	return r
 }

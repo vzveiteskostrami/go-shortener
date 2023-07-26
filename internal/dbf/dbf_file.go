@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 	"github.com/vzveiteskostrami/go-shortener/internal/misc"
@@ -34,13 +35,15 @@ func (f *FMStorage) DBFInit() int64 {
 		}
 		logging.S().Infof("Открыт файл %s для записи и чтения", config.Storage.FileName)
 	}
-	nextNumFile := f.readStoredData()
+	var nextNumFile int64 = 0
+	nextNumFile, auth.NextOWNERID = f.readStoredData()
 	return nextNumFile
 }
 
-func (f *FMStorage) readStoredData() int64 {
+func (f *FMStorage) readStoredData() (int64, int64) {
 	var err error
 	var nextNum int64 = 0
+	var nextOWNERID int64 = 0
 	storageURLItem := StorageURL{}
 
 	if f.store == nil {
@@ -48,7 +51,7 @@ func (f *FMStorage) readStoredData() int64 {
 	}
 
 	if misc.IsNil(f.fStore) {
-		return 0
+		return 0, 0
 	}
 
 	scanner := bufio.NewScanner(f.fStore)
@@ -63,8 +66,11 @@ func (f *FMStorage) readStoredData() int64 {
 		if nextNum <= storageURLItem.UUID {
 			nextNum = storageURLItem.UUID + 1
 		}
+		if nextOWNERID <= storageURLItem.OWNERID {
+			nextOWNERID = storageURLItem.OWNERID + 1
+		}
 	}
-	return nextNum
+	return nextNum, nextOWNERID
 }
 
 func (f *FMStorage) DBFClose() {
@@ -106,4 +112,17 @@ func (f *FMStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 func (f *FMStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
+}
+
+func (f *FMStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
+	items := make([]StorageURL, 0)
+	item := StorageURL{}
+	for _, url := range f.store {
+		if url.OWNERID == ownerID {
+			item.ShortURL = url.ShortURL
+			item.OriginalURL = url.OriginalURL
+			items = append(items, item)
+		}
+	}
+	return items, nil
 }
