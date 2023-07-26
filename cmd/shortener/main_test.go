@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
 	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
 )
@@ -35,9 +37,12 @@ func Test_setLink(t *testing.T) {
 			s := strings.NewReader(tc.body)
 			r := httptest.NewRequest(tc.method, tc.url, s)
 			w := httptest.NewRecorder()
+			var owner int64 = 0
 
 			h := shorturl.SetLink()
-			h.ServeHTTP(w, r)
+			c := context.WithValue(context.WithValue(r.Context(), auth.CPownerID, owner), auth.CPownerValid, true)
+
+			h.ServeHTTP(w, r.WithContext(c))
 
 			assert.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
 			if tc.expectedBody != "" {
