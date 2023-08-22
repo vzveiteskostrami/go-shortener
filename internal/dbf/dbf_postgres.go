@@ -123,12 +123,13 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 			storageURLItem.OriginalURL,
 			storageURLItem.Deleted)
 		if err != nil {
-			logging.S().Panic(err)
+			logging.S().Infow(err.Error())
+			//logging.S().Panic(err)
 		} else {
-			logging.S().Infoln("Вставка " + storageURLItem.OriginalURL)
+			logging.S().Infow("Вставка " + storageURLItem.OriginalURL)
 		}
 	}
-	//d.printDBF()
+	d.printDBF()
 }
 
 func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
