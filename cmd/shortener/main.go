@@ -50,6 +50,7 @@ func mainRouter() chi.Router {
 		r.Post("/shorten", shorturl.SetJSONLinkf)
 		r.Post("/shorten/batch", shorturl.SetJSONBatchLinkf)
 		r.Get("/user/urls", shorturl.GetOwnerURLsListf)
+		r.Delete("/user/urls", shorturl.DeleteOwnerURLsListf)
 	})
 
 	r.Route("/ping", func(r chi.Router) {

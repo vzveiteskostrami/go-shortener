@@ -16,6 +16,8 @@ type PGStorage struct {
 	db *sql.DB
 }
 
+var delSQLBody string
+
 func (d *PGStorage) DBFInit() int64 {
 	var err error
 
@@ -111,12 +113,14 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 		storageURLItem.UUID = su.UUID
 		storageURLItem.OWNERID = su.OWNERID
 		storageURLItem.ShortURL = su.ShortURL
+		storageURLItem.Deleted = su.Deleted
 	} else {
-		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (OWNERID,UUID,SHORTURL,ORIGINALURL) VALUES ($1,$2,$3,$4);",
+		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG) VALUES ($1,$2,$3,$4,$5);",
 			storageURLItem.OWNERID,
 			storageURLItem.UUID,
 			storageURLItem.ShortURL,
-			storageURLItem.OriginalURL)
+			storageURLItem.OriginalURL,
+			storageURLItem.Deleted)
 		if err != nil {
 			logging.S().Panic(err)
 		}
@@ -128,9 +132,9 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 	storageURLItem := StorageURL{}
 	sbody := ``
 	if byLink {
-		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL from urlstore WHERE shorturl=$1;"
+		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG from urlstore WHERE shorturl=$1;"
 	} else {
-		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL from urlstore WHERE originalurl=$1;"
+		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG from urlstore WHERE originalurl=$1;"
 	}
 	rows, err := d.db.QueryContext(context.Background(), sbody, link)
 	if err != nil {
@@ -143,7 +147,7 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 
 	ok := false
 	for !ok && rows.Next() {
-		err = rows.Scan(&storageURLItem.OWNERID, &storageURLItem.UUID, &storageURLItem.ShortURL, &storageURLItem.OriginalURL)
+		err = rows.Scan(&storageURLItem.OWNERID, &storageURLItem.UUID, &storageURLItem.ShortURL, &storageURLItem.OriginalURL, &storageURLItem.Deleted)
 		if err != nil {
 			logging.S().Panic(err)
 		}
@@ -152,6 +156,30 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 
 	//d.printDBF()
 	return storageURLItem, ok
+}
+
+func (d *PGStorage) AddToDel(surl string) {
+	if delSQLBody != "" {
+		delSQLBody += ","
+	}
+	delSQLBody += "('" + surl + "',true)"
+}
+
+func (d *PGStorage) BeginDel() {
+	delSQLBody = ""
+}
+
+func (d *PGStorage) EndDel() {
+	if delSQLBody == "" {
+		return
+	}
+	delSQLBody = "update urlstore set deleteflag=tmp.df from (values " +
+		delSQLBody +
+		") as tmp (su,df) where urlstore.shorturl=tmp.su;"
+	_, err := d.db.ExecContext(context.Background(), delSQLBody)
+	if err != nil {
+		logging.S().Panic(err)
+	}
 }
 
 func (d *PGStorage) PingDBf(w http.ResponseWriter, r *http.Request) {

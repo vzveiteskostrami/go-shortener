@@ -19,6 +19,8 @@ type FMStorage struct {
 	store  map[string]StorageURL
 }
 
+var needRewriteStorage bool
+
 func (f *FMStorage) DBFInit() int64 {
 	var err error
 	if config.Storage.FileName != "" {
@@ -63,6 +65,7 @@ func (f *FMStorage) readStoredData() (int64, int64) {
 			logging.S().Panic(err)
 		}
 		f.store[storageURLItem.ShortURL] = storageURLItem
+		//fmt.Println(storageURLItem.OWNERID, storageURLItem.ShortURL)
 		if nextNum <= storageURLItem.UUID {
 			nextNum = storageURLItem.UUID + 1
 		}
@@ -95,6 +98,40 @@ func (f *FMStorage) DBFSaveLink(storageURLItem *StorageURL) {
 	_, _ = f.fStore.Write(data)
 }
 
+func (f *FMStorage) BeginDel() {
+	needRewriteStorage = false
+}
+
+func (f *FMStorage) AddToDel(surl string) {
+	if f.store == nil {
+		f.store = make(map[string]StorageURL)
+	}
+
+	st := f.store[surl]
+	st.Deleted = true
+	f.store[surl] = st
+	needRewriteStorage = true
+}
+
+func (f *FMStorage) EndDel() {
+	if f.fStore == nil || !needRewriteStorage {
+		return
+	}
+	f.fStore.Close()
+	os.Truncate(config.Storage.FileName, 0)
+	var err error
+	f.fStore, err = os.OpenFile(config.Storage.FileName, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		logging.S().Panic(err)
+	}
+	for _, url := range f.store {
+		data, _ := json.Marshal(&url)
+		// добавляем перенос строки
+		data = append(data, '\n')
+		_, _ = f.fStore.Write(data)
+	}
+}
+
 func (f *FMStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 	if byLink {
 		url, ok := f.store[link]
@@ -121,6 +158,7 @@ func (f *FMStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 		if url.OWNERID == ownerID {
 			item.ShortURL = url.ShortURL
 			item.OriginalURL = url.OriginalURL
+			item.Deleted = url.Deleted
 			items = append(items, item)
 		}
 	}

@@ -46,8 +46,12 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
 		} else {
-			w.Header().Set("Location", url.OriginalURL)
-			w.WriteHeader(http.StatusTemporaryRedirect)
+			if url.Deleted {
+				w.WriteHeader(http.StatusGone)
+			} else {
+				w.Header().Set("Location", url.OriginalURL)
+				w.WriteHeader(http.StatusTemporaryRedirect)
+			}
 		}
 	case <-r.Context().Done():
 		logging.S().Infow("Получение короткого URL прервано на клиентской стороне")
@@ -147,6 +151,7 @@ type cmnURL struct {
 	CorrelationID *string `json:"correlation_id,omitempty"`
 	OriginalURL   *string `json:"original_url,omitempty"`
 	ShortURL      *string `json:"short_url,omitempty"`
+	Deleted       *bool   `json:"deleted,omitempty"`
 }
 
 //type outURL2 struct {
@@ -201,11 +206,6 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	//ownerValid := r.Context().Value(auth.CPownerValid)
-	//if !ownerValid.(bool) {
-	//	w.WriteHeader(http.StatusUnauthorized)
-	//	return
-	//}
 	var (
 		ownerID int64
 		urls    []dbf.StorageURL
@@ -256,9 +256,149 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+
+	var surls []string
+	if err := json.NewDecoder(r.Body).Decode(&surls); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+
+	ownerID := r.Context().Value(auth.CPownerID).(int64)
+
+	go func() {
+		doneCh := make(chan struct{})
+		defer close(doneCh)
+
+		dataCh := delRun(doneCh, surls)
+
+		channels := delFanOut(doneCh, dataCh, len(surls), ownerID)
+
+		outCh := delFanIn(doneCh, channels...)
+
+		dbf.Store.BeginDel()
+		for res := range outCh {
+			if res != "" {
+				dbf.Store.AddToDel(res)
+			}
+		}
+		dbf.Store.EndDel()
+	}()
+}
+
 func makeURL(num int64) string {
 	if config.Addresses.In == nil {
 		config.ReadData()
 	}
 	return config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + strconv.FormatInt(num, 36)
+}
+
+func delRun(doneCh chan struct{}, input []string) chan string {
+	inputCh := make(chan string)
+
+	go func() {
+		defer close(inputCh)
+
+		for _, data := range input {
+			select {
+			case <-doneCh:
+				return
+			case inputCh <- data:
+			}
+		}
+	}()
+
+	return inputCh
+}
+
+func delFanOut(doneCh chan struct{}, inputCh chan string, sz int, ownerID int64) []chan string {
+	// количество горутин add
+	numWorkers := 10
+	if sz < 10 {
+		numWorkers = sz
+	}
+	// каналы, в которые отправляются результаты
+	channels := make([]chan string, numWorkers)
+
+	for i := 0; i < numWorkers; i++ {
+		// получаем канал из горутины delCheck
+		addResultCh := delCheck(doneCh, inputCh, ownerID)
+		// отправляем его в слайс каналов
+		channels[i] = addResultCh
+	}
+
+	// возвращаем слайс каналов
+	return channels
+}
+
+func delCheck(doneCh chan struct{}, inputCh chan string, ownerID int64) chan string {
+	addRes := make(chan string)
+
+	go func() {
+		defer close(addRes)
+
+		for data := range inputCh {
+			result := data
+			if url, ok := dbf.Store.FindLink(data, true); ok {
+				if url.Deleted || url.OWNERID != ownerID {
+					result = ""
+				}
+			} else {
+				result = ""
+			}
+
+			select {
+			case <-doneCh:
+				return
+			case addRes <- result:
+			}
+		}
+	}()
+	return addRes
+}
+
+func delFanIn(doneCh chan struct{}, resultChs ...chan string) chan string {
+	// конечный выходной канал в который отправляем данные из всех каналов из слайса, назовём его результирующим
+	finalCh := make(chan string)
+
+	// понадобится для ожидания всех горутин
+	var wg sync.WaitGroup
+
+	// перебираем все входящие каналы
+	for _, ch := range resultChs {
+		// в горутину передавать переменную цикла нельзя, поэтому делаем так
+		chClosure := ch
+
+		// инкрементируем счётчик горутин, которые нужно подождать
+		wg.Add(1)
+
+		go func() {
+			// откладываем сообщение о том, что горутина завершилась
+			defer wg.Done()
+
+			// получаем данные из канала
+			for data := range chClosure {
+				select {
+				// выходим из горутины, если канал закрылся
+				case <-doneCh:
+					return
+				// если не закрылся, отправляем данные в конечный выходной канал
+				case finalCh <- data:
+				}
+			}
+		}()
+	}
+
+	go func() {
+		// ждём завершения всех горутин
+		wg.Wait()
+		// когда все горутины завершились, закрываем результирующий канал
+		close(finalCh)
+	}()
+
+	// возвращаем результирующий канал
+	return finalCh
 }
