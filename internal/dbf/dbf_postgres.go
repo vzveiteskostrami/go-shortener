@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"strconv"
 
 	_ "github.com/lib/pq"
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
@@ -123,6 +124,8 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 			storageURLItem.Deleted)
 		if err != nil {
 			logging.S().Panic(err)
+		} else {
+			logging.S().Infoln("Вставка " + storageURLItem.OriginalURL)
 		}
 	}
 	//d.printDBF()
@@ -154,7 +157,7 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 		ok = true
 	}
 
-	//d.printDBF()
+	d.printDBF()
 	return storageURLItem, ok
 }
 
@@ -198,7 +201,6 @@ func (d *PGStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-/*
 func (d *PGStorage) printDBF() {
 	rows, err := d.db.QueryContext(context.Background(), "SELECT OWNERID,SHORTURL,ORIGINALURL from urlstore;")
 	if err != nil {
@@ -222,4 +224,3 @@ func (d *PGStorage) printDBF() {
 	}
 	logging.S().Infow("`````````````")
 }
-*/
