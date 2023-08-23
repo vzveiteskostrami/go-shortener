@@ -71,12 +71,14 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
+		fmt.Fprintln(os.Stdout, "Ошибка", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	url := string(b)
 	if url == "" {
+		fmt.Fprintln(os.Stdout, "Ошибка не указан URL")
 		http.Error(w, `Не указан URL`, http.StatusBadRequest)
 		return
 	}
