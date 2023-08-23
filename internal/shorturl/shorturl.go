@@ -3,8 +3,10 @@ package shorturl
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 
@@ -95,6 +97,7 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusConflict)
 	}
 	w.Write([]byte(makeURL(su.UUID)))
+	fmt.Fprintln(os.Stdout, "Записан URL", url)
 }
 
 type inURL struct {

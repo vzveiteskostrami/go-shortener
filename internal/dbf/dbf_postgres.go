@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	_ "github.com/lib/pq"
@@ -123,10 +125,10 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 			storageURLItem.OriginalURL,
 			storageURLItem.Deleted)
 		if err != nil {
-			logging.S().Infow("Мы здесь!", err.Error())
+			fmt.Fprintln(os.Stdout, "Мы здесь!", err.Error())
 			//logging.S().Panic(err)
 		} else {
-			logging.S().Infow("Вставка " + storageURLItem.OriginalURL)
+			fmt.Fprintln(os.Stdout, "Вставка "+storageURLItem.OriginalURL)
 		}
 	}
 	d.printDBF()
@@ -143,12 +145,12 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 	rows, err := d.db.QueryContext(context.Background(), sbody, link)
 	if err != nil {
 		//logging.S().Panic(err)
-		logging.S().Infow("оппа!", err)
+		fmt.Fprintln(os.Stdout, "оппа!", err)
 		return StorageURL{}, false
 	}
 	if rows.Err() != nil {
 		//logging.S().Panic(rows.Err())
-		logging.S().Infow("Оппа два!", rows.Err().Error())
+		fmt.Fprintln(os.Stdout, "Оппа два!", rows.Err().Error())
 		return StorageURL{}, false
 	}
 	defer rows.Close()
