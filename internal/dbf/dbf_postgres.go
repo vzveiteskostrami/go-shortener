@@ -131,7 +131,7 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 			fmt.Fprintln(os.Stdout, "Вставка "+storageURLItem.OriginalURL)
 		}
 	}
-	d.printDBF()
+	//d.PrintDBF()
 }
 
 func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
@@ -164,7 +164,7 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 		ok = true
 	}
 
-	d.printDBF()
+	//d.printDBF()
 	return storageURLItem, ok
 }
 
@@ -208,7 +208,7 @@ func (d *PGStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (d *PGStorage) printDBF() {
+func (d *PGStorage) PrintDBF() {
 	rows, err := d.db.QueryContext(context.Background(), "SELECT OWNERID,SHORTURL,ORIGINALURL from urlstore;")
 	if err != nil {
 		logging.S().Panic(err)

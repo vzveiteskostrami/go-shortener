@@ -151,6 +151,9 @@ func (f *FMStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (f *FMStorage) PrintDBF() {
+}
+
 func (f *FMStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 	items := make([]StorageURL, 0)
 	item := StorageURL{}

@@ -29,6 +29,7 @@ type GSStorage interface {
 	AddToDel(surl string)
 	BeginDel()
 	EndDel()
+	PrintDBF()
 }
 
 type StorageURL struct {
