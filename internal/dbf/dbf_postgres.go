@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	_ "github.com/lib/pq"
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
@@ -20,6 +21,7 @@ type PGStorage struct {
 }
 
 var delSQLBody string
+var lockWrite sync.Mutex
 
 func (d *PGStorage) DBFInit() int64 {
 	var err error
@@ -118,6 +120,8 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 		storageURLItem.ShortURL = su.ShortURL
 		storageURLItem.Deleted = su.Deleted
 	} else {
+		lockWrite.Lock()
+		defer lockWrite.Unlock()
 		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG) VALUES ($1,$2,$3,$4,$5);",
 			storageURLItem.OWNERID,
 			storageURLItem.UUID,
@@ -186,6 +190,8 @@ func (d *PGStorage) EndDel() {
 	delSQLBody = "update urlstore set deleteflag=tmp.df from (values " +
 		delSQLBody +
 		") as tmp (su,df) where urlstore.shorturl=tmp.su;"
+	lockWrite.Lock()
+	defer lockWrite.Unlock()
 	_, err := d.db.ExecContext(context.Background(), delSQLBody)
 	if err != nil {
 		logging.S().Infow(delSQLBody)
