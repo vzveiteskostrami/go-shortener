@@ -188,6 +188,7 @@ func (d *PGStorage) EndDel() {
 		") as tmp (su,df) where urlstore.shorturl=tmp.su;"
 	_, err := d.db.ExecContext(context.Background(), delSQLBody)
 	if err != nil {
+		logging.S().Infow(delSQLBody)
 		logging.S().Panic(err)
 	}
 }
