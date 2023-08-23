@@ -195,7 +195,8 @@ func (d *PGStorage) EndDel() {
 	_, err := d.db.ExecContext(context.Background(), delSQLBody)
 	if err != nil {
 		logging.S().Infow(delSQLBody)
-		logging.S().Panic(err)
+		logging.S().Infow("Паника", err)
+		//logging.S().Panic(err)
 	}
 }
 
