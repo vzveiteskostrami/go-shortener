@@ -31,7 +31,7 @@ func SetURLNum(num int64) {
 }
 
 func GetLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "Запущен GetLinkf")
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetLinkf")
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
 
@@ -67,7 +67,7 @@ func SetLink() http.Handler {
 }
 
 func SetLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "Запущен SetLinkf")
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetLinkf")
 	w.Header().Set("Content-Type", "text/plain")
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -117,7 +117,7 @@ func SetJSONLink() http.Handler {
 }
 
 func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "Запущен SetJSONLinkf")
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONLinkf")
 	w.Header().Set("Content-Type", "application/json")
 	var url inURL
 	if err := json.NewDecoder(r.Body).Decode(&url); err != nil {
@@ -167,7 +167,7 @@ type cmnURL struct {
 //}
 
 func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "Запущен SetJSONBatchLinkf")
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONBatchLinkf")
 	w.Header().Set("Content-Type", "application/json")
 	var urls []cmnURL
 	if err := json.NewDecoder(r.Body).Decode(&urls); err != nil {
@@ -213,7 +213,7 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "Запущен GetOwnerURLsListf")
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
 	w.Header().Set("Content-Type", "application/json")
 
 	var (
@@ -267,6 +267,7 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "DeleteOwnerURLsListf")
 	w.Header().Set("Content-Type", "text/plain")
 
 	var surls []string
@@ -276,7 +277,7 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-
+	fmt.Fprintln(os.Stdout, "`````````````", surls)
 	ownerID := r.Context().Value(auth.CPownerID).(int64)
 
 	go func() {
