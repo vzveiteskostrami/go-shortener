@@ -31,7 +31,7 @@ func SetURLNum(num int64) {
 }
 
 func GetLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetLinkf")
+	fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
 
@@ -67,7 +67,7 @@ func SetLink() http.Handler {
 }
 
 func SetLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetLinkf")
+	fmt.Fprintln(os.Stdout, "**************", "SetLinkf")
 	w.Header().Set("Content-Type", "text/plain")
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -101,7 +101,7 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusConflict)
 	}
 	w.Write([]byte(makeURL(su.UUID)))
-	fmt.Fprintln(os.Stdout, "Записан URL", url)
+	fmt.Fprintln(os.Stdout, "Записан URL", url, "как", su.ShortURL)
 }
 
 type inURL struct {
@@ -277,7 +277,7 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-	fmt.Fprintln(os.Stdout, "`````````````", surls)
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", surls)
 	ownerID := r.Context().Value(auth.CPownerID).(int64)
 
 	go func() {
@@ -290,14 +290,14 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 
 		outCh := delFanIn(doneCh, channels...)
 
+		lockCounter.Lock()
+		defer lockCounter.Unlock()
 		dbf.Store.BeginDel()
 		for res := range outCh {
 			if res != "" {
 				dbf.Store.AddToDel(res)
 			}
 		}
-		lockCounter.Lock()
-		defer lockCounter.Unlock()
 		dbf.Store.EndDel()
 	}()
 }
