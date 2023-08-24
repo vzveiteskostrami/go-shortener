@@ -296,6 +296,8 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 				dbf.Store.AddToDel(res)
 			}
 		}
+		lockCounter.Lock()
+		defer lockCounter.Unlock()
 		dbf.Store.EndDel()
 	}()
 }
