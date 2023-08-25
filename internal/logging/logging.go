@@ -97,7 +97,6 @@ func WithLogging(h http.Handler) http.Handler {
 			"status:", responseData.status, http.StatusText(responseData.status),
 			"duration:", duration,
 			"size:", responseData.size,
-			//"completed", ctx.Value(Context_completedKey),
 		)
 	}
 	// возвращаем функционально расширенный хендлер

@@ -4,11 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
-	"os"
 	"strconv"
-	"sync"
 
 	_ "github.com/lib/pq"
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
@@ -21,7 +18,6 @@ type PGStorage struct {
 }
 
 var delSQLBody string
-var lockWrite sync.Mutex
 
 func (d *PGStorage) DBFInit() int64 {
 	var err error
@@ -108,7 +104,6 @@ func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 		}
 		items = append(items, item)
 	}
-	//d.printDBF()
 	return items, nil
 }
 
@@ -120,8 +115,8 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 		storageURLItem.ShortURL = su.ShortURL
 		storageURLItem.Deleted = su.Deleted
 	} else {
-		lockWrite.Lock()
-		defer lockWrite.Unlock()
+		//lockWrite.Lock()
+		//defer lockWrite.Unlock()
 		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG) VALUES ($1,$2,$3,$4,$5);",
 			storageURLItem.OWNERID,
 			storageURLItem.UUID,
@@ -129,13 +124,15 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 			storageURLItem.OriginalURL,
 			storageURLItem.Deleted)
 		if err != nil {
-			fmt.Fprintln(os.Stdout, "Мы здесь!", err.Error())
-			//logging.S().Panic(err)
-		} else {
-			fmt.Fprintln(os.Stdout, "Вставка "+storageURLItem.OriginalURL)
+			// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+			//fmt.Fprintln(os.Stdout, "Мы здесь!", err.Error())
+			logging.S().Panic(err)
 		}
+		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+		//else {
+		//		fmt.Fprintln(os.Stdout, "Вставка "+storageURLItem.OriginalURL)
+		//	}
 	}
-	//d.PrintDBF()
 }
 
 func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
@@ -148,13 +145,15 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 	}
 	rows, err := d.db.QueryContext(context.Background(), sbody, link)
 	if err != nil {
-		//logging.S().Panic(err)
-		fmt.Fprintln(os.Stdout, "оппа!", err)
+		logging.S().Panic(err)
+		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+		//fmt.Fprintln(os.Stdout, "оппа!", err)
 		return StorageURL{}, false
 	}
 	if rows.Err() != nil {
-		//logging.S().Panic(rows.Err())
-		fmt.Fprintln(os.Stdout, "Оппа два!", rows.Err().Error())
+		logging.S().Panic(rows.Err())
+		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+		//fmt.Fprintln(os.Stdout, "Оппа два!", rows.Err().Error())
 		return StorageURL{}, false
 	}
 	defer rows.Close()
@@ -168,7 +167,6 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 		ok = true
 	}
 
-	//d.printDBF()
 	return storageURLItem, ok
 }
 
@@ -190,8 +188,8 @@ func (d *PGStorage) EndDel() {
 	delSQLBody = "update urlstore set deleteflag=tmp.df from (values " +
 		delSQLBody +
 		") as tmp (su,df) where urlstore.shorturl=tmp.su;"
-	lockWrite.Lock()
-	defer lockWrite.Unlock()
+	//lockWrite.Lock()
+	//defer lockWrite.Unlock()
 	_, err := d.db.ExecContext(context.Background(), delSQLBody)
 	if err != nil {
 		logging.S().Infow(delSQLBody)

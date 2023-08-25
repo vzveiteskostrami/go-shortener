@@ -65,7 +65,6 @@ func (f *FMStorage) readStoredData() (int64, int64) {
 			logging.S().Panic(err)
 		}
 		f.store[storageURLItem.ShortURL] = storageURLItem
-		//fmt.Println(storageURLItem.OWNERID, storageURLItem.ShortURL)
 		if nextNum <= storageURLItem.UUID {
 			nextNum = storageURLItem.UUID + 1
 		}

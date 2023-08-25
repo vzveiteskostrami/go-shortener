@@ -3,10 +3,8 @@ package shorturl
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 
@@ -20,6 +18,7 @@ import (
 var (
 	currURLNum  int64 = 0
 	lockCounter sync.Mutex
+	lockWrite   sync.Mutex
 )
 
 func GetLink() http.Handler {
@@ -31,7 +30,8 @@ func SetURLNum(num int64) {
 }
 
 func GetLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	//fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
 
@@ -67,18 +67,21 @@ func SetLink() http.Handler {
 }
 
 func SetLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "**************", "SetLinkf")
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	//fmt.Fprintln(os.Stdout, "**************", "SetLinkf")
 	w.Header().Set("Content-Type", "text/plain")
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
-		fmt.Fprintln(os.Stdout, "Ошибка", err)
+		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+		//fmt.Fprintln(os.Stdout, "Ошибка", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	url := string(b)
 	if url == "" {
-		fmt.Fprintln(os.Stdout, "Ошибка не указан URL")
+		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+		//fmt.Fprintln(os.Stdout, "Ошибка не указан URL")
 		http.Error(w, `Не указан URL`, http.StatusBadRequest)
 		return
 	}
@@ -93,6 +96,8 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 		UUID:     nextNum,
 		OWNERID:  ownerID.(int64),
 		ShortURL: strconv.FormatInt(nextNum, 36)}
+	lockWrite.Lock()
+	defer lockWrite.Unlock()
 	dbf.Store.DBFSaveLink(&su)
 	if su.UUID == nextNum {
 		w.WriteHeader(http.StatusCreated)
@@ -101,7 +106,8 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusConflict)
 	}
 	w.Write([]byte(makeURL(su.UUID)))
-	fmt.Fprintln(os.Stdout, "Записан URL", url, "как", su.ShortURL)
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	//fmt.Fprintln(os.Stdout, "Записан URL", url, "как", su.ShortURL)
 }
 
 type inURL struct {
@@ -117,7 +123,8 @@ func SetJSONLink() http.Handler {
 }
 
 func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONLinkf")
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONLinkf")
 	w.Header().Set("Content-Type", "application/json")
 	var url inURL
 	if err := json.NewDecoder(r.Body).Decode(&url); err != nil {
@@ -130,8 +137,8 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var surl outURL
-	lockCounter.Lock()
-	defer lockCounter.Unlock()
+	lockWrite.Lock()
+	defer lockWrite.Unlock()
 	nextNum := currURLNum
 
 	ownerID := r.Context().Value(auth.CPownerID)
@@ -162,12 +169,9 @@ type cmnURL struct {
 	Deleted       *bool   `json:"deleted,omitempty"`
 }
 
-//type outURL2 struct {
-//	CorrelationID string `json:"correlation_id"`
-//}
-
 func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONBatchLinkf")
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONBatchLinkf")
 	w.Header().Set("Content-Type", "application/json")
 	var urls []cmnURL
 	if err := json.NewDecoder(r.Body).Decode(&urls); err != nil {
@@ -181,8 +185,8 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var surls []cmnURL
-	lockCounter.Lock()
-	defer lockCounter.Unlock()
+	lockWrite.Lock()
+	defer lockWrite.Unlock()
 
 	ownerID := r.Context().Value(auth.CPownerID)
 
@@ -213,7 +217,8 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	///fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
 	w.Header().Set("Content-Type", "application/json")
 
 	var (
@@ -267,7 +272,8 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "DeleteOwnerURLsListf")
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "DeleteOwnerURLsListf")
 	w.Header().Set("Content-Type", "text/plain")
 
 	var surls []string
@@ -277,7 +283,8 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", surls)
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", surls)
 	ownerID := r.Context().Value(auth.CPownerID).(int64)
 
 	go func() {
@@ -290,8 +297,8 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 
 		outCh := delFanIn(doneCh, channels...)
 
-		lockCounter.Lock()
-		defer lockCounter.Unlock()
+		lockWrite.Lock()
+		defer lockWrite.Unlock()
 		dbf.Store.BeginDel()
 		for res := range outCh {
 			if res != "" {
