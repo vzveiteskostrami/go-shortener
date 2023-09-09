@@ -181,7 +181,7 @@ func (d *PGStorage) AddToDel(surl string) {
 		delSQLBody += ","
 	}
 	//delSQLBody += "('" + surl + "',true)"
-	delSQLBody += "('?',true)"
+	delSQLBody += "(?,true)"
 	delSQLParams = append(delSQLParams, surl)
 	logging.S().Info("Для удаления:", delSQLBody, ">><<", delSQLParams, ">>")
 }
@@ -192,11 +192,9 @@ func (d *PGStorage) BeginDel() {
 }
 
 func (d *PGStorage) EndDel() {
-	logging.S().Info("УДАЛЕНИЕ1:", delSQLBody, "++++", delSQLParams, "++")
 	if delSQLBody == "" {
 		return
 	}
-	logging.S().Info("УДАЛЕНИЕ2:", delSQLBody, "++++", delSQLParams, "++")
 	delSQLBody = "update urlstore set deleteflag=tmp.df from (values " +
 		delSQLBody +
 		") as tmp (su,df) where urlstore.shorturl=tmp.su;"
