@@ -25,7 +25,7 @@ var (
 
 func GoDel() {
 	delCh = make(chan string)
-	//tick := time.Tick(300 * time.Millisecond)
+	//tick := time.Tick(10 * time.Millisecond)
 	tickCh := make(chan struct{})
 	go func() {
 		defer close(tickCh)
@@ -331,7 +331,7 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 		surl := ""
 		for _, data := range surls {
 			if url, ok := dbf.Store.FindLink(data, true); ok {
-				logging.S().Infow("Найден url:", data, url.Deleted, url.OWNERID, ownerID)
+				logging.S().Info("Найден url:", data, url.Deleted, url.OWNERID, ownerID)
 				if !url.Deleted && url.OWNERID == ownerID {
 					surl = data
 				}
