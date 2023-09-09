@@ -38,7 +38,7 @@ func (f *FMStorage) DBFInit() int64 {
 		logging.S().Infof("Открыт файл %s для записи и чтения", config.Storage.FileName)
 	}
 	var nextNumFile int64 = 0
-	nextNumFile, auth.NextOWNERID = f.readStoredData()
+	nextNumFile, auth.NewOWNERID = f.readStoredData()
 	return nextNumFile
 }
 
@@ -81,20 +81,22 @@ func (f *FMStorage) DBFClose() {
 	}
 }
 
-func (f *FMStorage) DBFSaveLink(storageURLItem *StorageURL) {
+func (f *FMStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 	if f.store == nil {
 		f.store = make(map[string]StorageURL)
 	}
 
 	f.store[storageURLItem.ShortURL] = *storageURLItem
 	if f.fStore == nil {
-		return
+		return nil
 	}
 
 	data, _ := json.Marshal(&storageURLItem)
 	// добавляем перенос строки
 	data = append(data, '\n')
 	_, _ = f.fStore.Write(data)
+
+	return nil
 }
 
 func (f *FMStorage) BeginDel() {

@@ -22,7 +22,7 @@ func MakeStorage() {
 type GSStorage interface {
 	DBFInit() int64
 	DBFClose()
-	DBFSaveLink(storageURLItem *StorageURL)
+	DBFSaveLink(storageURLItem *StorageURL) error
 	FindLink(link string, byLink bool) (StorageURL, bool)
 	PingDBf(w http.ResponseWriter, r *http.Request)
 	DBFGetOwnURLs(ownerID int64) ([]StorageURL, error)

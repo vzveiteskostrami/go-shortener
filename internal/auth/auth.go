@@ -25,7 +25,7 @@ const SecretKey = "pomidoryichesnok"
 var (
 	CPownerID     ContextParamName = "OwnerID"
 	CPownerValid  ContextParamName = "OwnerValid"
-	NextOWNERID   int64            = 0
+	NewOWNERID    int64            = 0
 	lockMakeToken sync.Mutex
 )
 
@@ -47,7 +47,8 @@ func AuthHandle(next http.Handler) http.Handler {
 		}
 
 		if err != nil {
-			logging.S().Panic(err)
+			logging.S().Error(err)
+			return
 		}
 
 		if token != "" {
@@ -86,11 +87,11 @@ func getOwnerID(tokenString string) (int64, bool) {
 func makeToken() (string, int64, error) {
 	lockMakeToken.Lock()
 	defer lockMakeToken.Unlock()
-	n := NextOWNERID
+	n := NewOWNERID
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
-		OwnerID: NextOWNERID,
+		OwnerID: NewOWNERID,
 	})
-	NextOWNERID++
+	NewOWNERID++
 
 	tokenString, err := token.SignedString([]byte(SecretKey))
 	if err != nil {

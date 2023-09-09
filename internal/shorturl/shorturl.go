@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
@@ -19,7 +20,42 @@ var (
 	currURLNum  int64 = 0
 	lockCounter sync.Mutex
 	lockWrite   sync.Mutex
+	delCh       chan string
 )
+
+func GoDel() {
+	delCh = make(chan string)
+	//tick := time.Tick(300 * time.Millisecond)
+	tickCh := make(chan struct{})
+	go func() {
+		defer close(tickCh)
+		for {
+			time.Sleep(300 * time.Millisecond)
+			tickCh <- struct{}{}
+		}
+	}()
+
+	go func() {
+		defer close(delCh)
+		url := ""
+		wasAdd := false
+		dbf.Store.BeginDel()
+		for {
+			select {
+			//case <-tick:
+			case <-tickCh:
+				if wasAdd {
+					dbf.Store.EndDel()
+					dbf.Store.BeginDel()
+					wasAdd = false
+				}
+			case url = <-delCh:
+				dbf.Store.AddToDel(url)
+				wasAdd = true
+			}
+		}
+	}()
+}
 
 func GetLink() http.Handler {
 	return http.HandlerFunc(GetLinkf)
@@ -98,14 +134,18 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 		ShortURL: strconv.FormatInt(nextNum, 36)}
 	lockWrite.Lock()
 	defer lockWrite.Unlock()
-	dbf.Store.DBFSaveLink(&su)
-	if su.UUID == nextNum {
-		w.WriteHeader(http.StatusCreated)
-		currURLNum++
+	err = dbf.Store.DBFSaveLink(&su)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
-		w.WriteHeader(http.StatusConflict)
+		if su.UUID == nextNum {
+			w.WriteHeader(http.StatusCreated)
+			currURLNum++
+		} else {
+			w.WriteHeader(http.StatusConflict)
+		}
+		w.Write([]byte(makeURL(su.UUID)))
 	}
-	w.Write([]byte(makeURL(su.UUID)))
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	//fmt.Fprintln(os.Stdout, "Записан URL", url, "как", su.ShortURL)
 }
@@ -288,24 +328,18 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	ownerID := r.Context().Value(auth.CPownerID).(int64)
 
 	go func() {
-		doneCh := make(chan struct{})
-		defer close(doneCh)
-
-		dataCh := delRun(doneCh, surls)
-
-		channels := delFanOut(doneCh, dataCh, len(surls), ownerID)
-
-		outCh := delFanIn(doneCh, channels...)
-
-		lockWrite.Lock()
-		defer lockWrite.Unlock()
-		dbf.Store.BeginDel()
-		for res := range outCh {
-			if res != "" {
-				dbf.Store.AddToDel(res)
+		surl := ""
+		for _, data := range surls {
+			if url, ok := dbf.Store.FindLink(data, true); ok {
+				if !url.Deleted && url.OWNERID == ownerID {
+					surl = data
+				}
+			}
+			if surl != "" {
+				delCh <- surl
+				surl = ""
 			}
 		}
-		dbf.Store.EndDel()
 	}()
 }
 
@@ -316,6 +350,7 @@ func makeURL(num int64) string {
 	return config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + strconv.FormatInt(num, 36)
 }
 
+/*
 func delRun(doneCh chan struct{}, input []string) chan string {
 	inputCh := make(chan string)
 
@@ -422,3 +457,4 @@ func delFanIn(doneCh chan struct{}, resultChs ...chan string) chan string {
 	// возвращаем результирующий канал
 	return finalCh
 }
+*/

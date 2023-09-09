@@ -18,6 +18,7 @@ type PGStorage struct {
 }
 
 var delSQLBody string
+var delSQLParams []string
 
 func (d *PGStorage) DBFInit() int64 {
 	var err error
@@ -47,7 +48,7 @@ func (d *PGStorage) DBFClose() {
 }
 
 func (d *PGStorage) tableInitData() (int64, error) {
-	auth.NextOWNERID = 0
+	auth.NewOWNERID = 0
 	if d.db == nil {
 		return -1, errors.New("база данных не инициализирована")
 	}
@@ -75,7 +76,7 @@ func (d *PGStorage) tableInitData() (int64, error) {
 	}
 
 	if mxOwnerID.Valid {
-		auth.NextOWNERID = mxOwnerID.Int64 + 1
+		auth.NewOWNERID = mxOwnerID.Int64 + 1
 	}
 
 	if mxUUID.Valid {
@@ -88,10 +89,12 @@ func (d *PGStorage) tableInitData() (int64, error) {
 func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 	rows, err := d.db.QueryContext(context.Background(), "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
 	if err != nil {
-		logging.S().Panic(err)
+		logging.S().Error(err)
+		return nil, err
 	}
 	if rows.Err() != nil {
-		logging.S().Panic(rows.Err())
+		logging.S().Error(rows.Err())
+		return nil, rows.Err()
 	}
 	defer rows.Close()
 
@@ -100,14 +103,15 @@ func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 	for rows.Next() {
 		err = rows.Scan(&item.ShortURL, &item.OriginalURL)
 		if err != nil {
-			logging.S().Panic(err)
+			logging.S().Error()
+			return nil, err
 		}
 		items = append(items, item)
 	}
 	return items, nil
 }
 
-func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
+func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 	su, ok := d.FindLink(storageURLItem.OriginalURL, false)
 	if ok {
 		storageURLItem.UUID = su.UUID
@@ -126,13 +130,15 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
 		if err != nil {
 			// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 			//fmt.Fprintln(os.Stdout, "Мы здесь!", err.Error())
-			logging.S().Panic(err)
+			logging.S().Error(err)
+			return err
 		}
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 		//else {
 		//		fmt.Fprintln(os.Stdout, "Вставка "+storageURLItem.OriginalURL)
 		//	}
 	}
+	return nil
 }
 
 func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
@@ -174,15 +180,18 @@ func (d *PGStorage) AddToDel(surl string) {
 	if delSQLBody != "" {
 		delSQLBody += ","
 	}
-	delSQLBody += "('" + surl + "',true)"
+	//delSQLBody += "('" + surl + "',true)"
+	delSQLBody += "(?,true)"
+	delSQLParams = append(delSQLParams, surl)
 }
 
 func (d *PGStorage) BeginDel() {
 	delSQLBody = ""
+	delSQLParams = make([]string, 0)
 }
 
 func (d *PGStorage) EndDel() {
-	if delSQLBody == "" {
+	if delSQLBody != "" {
 		return
 	}
 	delSQLBody = "update urlstore set deleteflag=tmp.df from (values " +
@@ -190,10 +199,11 @@ func (d *PGStorage) EndDel() {
 		") as tmp (su,df) where urlstore.shorturl=tmp.su;"
 	//lockWrite.Lock()
 	//defer lockWrite.Unlock()
-	_, err := d.db.ExecContext(context.Background(), delSQLBody)
+	_, err := d.db.ExecContext(context.Background(), delSQLBody, delSQLParams)
 	if err != nil {
-		logging.S().Infow(delSQLBody)
-		logging.S().Infow("Паника", err)
+		logging.S().Error(err, delSQLBody)
+		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+		//logging.S().Infow("Паника", err)
 		//logging.S().Panic(err)
 	}
 }

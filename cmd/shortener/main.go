@@ -26,7 +26,7 @@ func main() {
 	dbf.MakeStorage()
 	shorturl.SetURLNum(dbf.Store.DBFInit())
 	defer dbf.Store.DBFClose()
-	//dbf.Store.PrintDBF()
+	shorturl.GoDel()
 
 	srv = &http.Server{
 		Addr:        config.Addresses.In.Host + ":" + strconv.Itoa(config.Addresses.In.Port),
@@ -71,19 +71,6 @@ func mainRouter() chi.Router {
 		r.Use(auth.AuthHandle)
 		r.Post("/", shorturl.SetLinkf)
 	})
-
-	/*
-		r.Use(compressing.GZIPHandle)
-		r.Use(logging.WithLogging)
-		r.Use(auth.AuthHandle)
-
-		r.Post("/", shorturl.SetLinkf)
-		r.Get("/{shlink}", shorturl.GetLinkf)
-		r.Post("/api/shorten", shorturl.SetJSONLinkf)
-		r.Post("/api/shorten/batch", shorturl.SetJSONBatchLinkf)
-		r.Get("/ping", dbf.Store.PingDBf)
-		r.Get("/co", cotik)
-	*/
 
 	return r
 }
