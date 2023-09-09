@@ -193,7 +193,7 @@ func (d *PGStorage) BeginDel() {
 
 func (d *PGStorage) EndDel() {
 	logging.S().Info("УДАЛЕНИЕ1:", delSQLBody, "++++", delSQLParams, "++")
-	if delSQLBody != "" {
+	if delSQLBody == "" {
 		return
 	}
 	logging.S().Info("УДАЛЕНИЕ2:", delSQLBody, "++++", delSQLParams, "++")
