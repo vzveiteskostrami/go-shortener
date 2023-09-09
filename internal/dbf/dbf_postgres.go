@@ -181,8 +181,9 @@ func (d *PGStorage) AddToDel(surl string) {
 		delSQLBody += ","
 	}
 	//delSQLBody += "('" + surl + "',true)"
-	delSQLBody += "(?,true)"
 	delSQLParams = append(delSQLParams, surl)
+	s := strconv.Itoa(len(delSQLParams))
+	delSQLBody += "($" + s + ",true)"
 	logging.S().Info("Для удаления:", delSQLBody, ">><<", delSQLParams, ">>")
 }
 
