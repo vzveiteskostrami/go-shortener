@@ -88,9 +88,13 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
 		} else {
+			logging.S().Info("find LINK#", link)
+
 			if url.Deleted {
+				logging.S().Info("find LINK# DELETED")
 				w.WriteHeader(http.StatusGone)
 			} else {
+				logging.S().Info("find LINK# GODNYY")
 				w.Header().Set("Location", url.OriginalURL)
 				w.WriteHeader(http.StatusTemporaryRedirect)
 			}
