@@ -183,6 +183,7 @@ func (d *PGStorage) AddToDel(surl string) {
 	//delSQLBody += "('" + surl + "',true)"
 	delSQLBody += "(?,true)"
 	delSQLParams = append(delSQLParams, surl)
+	logging.S().Infow("Для удаления:", delSQLBody)
 }
 
 func (d *PGStorage) BeginDel() {
