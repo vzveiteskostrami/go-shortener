@@ -18,7 +18,7 @@ type PGStorage struct {
 }
 
 var delSQLBody string
-var delSQLParams []string
+var delSQLParams []interface{}
 
 func (d *PGStorage) DBFInit() int64 {
 	var err error
@@ -188,7 +188,7 @@ func (d *PGStorage) AddToDel(surl string) {
 
 func (d *PGStorage) BeginDel() {
 	delSQLBody = ""
-	delSQLParams = make([]string, 0)
+	delSQLParams = make([]interface{}, 0)
 }
 
 func (d *PGStorage) EndDel() {
@@ -201,7 +201,7 @@ func (d *PGStorage) EndDel() {
 	logging.S().Info("УДАЛЕНИЕ3:", delSQLBody, "++++", delSQLParams, "++")
 	//lockWrite.Lock()
 	//defer lockWrite.Unlock()
-	rz, err := d.db.ExecContext(context.Background(), delSQLBody, delSQLParams)
+	rz, err := d.db.ExecContext(context.Background(), delSQLBody, delSQLParams...)
 	logging.S().Info("УДАЛЕНИЕ4:", rz, err)
 	if err != nil {
 		logging.S().Error(err, delSQLBody)

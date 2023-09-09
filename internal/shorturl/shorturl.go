@@ -32,7 +32,6 @@ func GoDel() {
 		for {
 			time.Sleep(300 * time.Millisecond)
 			tickCh <- struct{}{}
-			logging.S().Info("tick DO#")
 		}
 	}()
 
@@ -45,9 +44,7 @@ func GoDel() {
 			select {
 			//case <-tick:
 			case <-tickCh:
-				logging.S().Info("tick READ#")
 				if wasAdd {
-					logging.S().Info("tick EXEC#")
 					dbf.Store.EndDel()
 					dbf.Store.BeginDel()
 					wasAdd = false
