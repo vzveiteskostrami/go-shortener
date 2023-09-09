@@ -3,7 +3,6 @@ package logging
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"go.uber.org/zap"
 )
@@ -70,7 +69,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 func WithLogging(h http.Handler) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 
-		start := time.Now()
+		//start := time.Now()
 
 		responseData := &responseData{
 			status: 0,
@@ -89,15 +88,17 @@ func WithLogging(h http.Handler) http.Handler {
 		// Since возвращает разницу во времени между start
 		// и моментом вызова Since. Таким образом можно посчитать
 		// время выполнения запроса.
-		duration := time.Since(start)
+		//duration := time.Since(start)
 
-		sugar.Infoln(
-			"uri:", r.RequestURI,
-			"method:", r.Method,
-			"status:", responseData.status, http.StatusText(responseData.status),
-			"duration:", duration,
-			"size:", responseData.size,
-		)
+		/*
+			sugar.Infoln(
+				"uri:", r.RequestURI,
+				"method:", r.Method,
+				"status:", responseData.status, http.StatusText(responseData.status),
+				"duration:", duration,
+				"size:", responseData.size,
+			)
+		*/
 	}
 	// возвращаем функционально расширенный хендлер
 	return http.HandlerFunc(logFn)

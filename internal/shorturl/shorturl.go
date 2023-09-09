@@ -331,6 +331,7 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 		surl := ""
 		for _, data := range surls {
 			if url, ok := dbf.Store.FindLink(data, true); ok {
+				logging.S().Infow("Найден url:", data, url.Deleted, url.OWNERID, ownerID)
 				if !url.Deleted && url.OWNERID == ownerID {
 					surl = data
 				}
