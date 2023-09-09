@@ -192,17 +192,19 @@ func (d *PGStorage) BeginDel() {
 }
 
 func (d *PGStorage) EndDel() {
+	logging.S().Info("УДАЛЕНИЕ1:", delSQLBody, "++++", delSQLParams, "++")
 	if delSQLBody != "" {
 		return
 	}
+	logging.S().Info("УДАЛЕНИЕ2:", delSQLBody, "++++", delSQLParams, "++")
 	delSQLBody = "update urlstore set deleteflag=tmp.df from (values " +
 		delSQLBody +
 		") as tmp (su,df) where urlstore.shorturl=tmp.su;"
+	logging.S().Info("УДАЛЕНИЕ3:", delSQLBody, "++++", delSQLParams, "++")
 	//lockWrite.Lock()
 	//defer lockWrite.Unlock()
-	logging.S().Info("УДАЛЕНИЕ:", delSQLBody, "++++", delSQLParams, "++")
 	rz, err := d.db.ExecContext(context.Background(), delSQLBody, delSQLParams)
-	logging.S().Info("УДАЛЕНИЕ:", rz, err)
+	logging.S().Info("УДАЛЕНИЕ4:", rz, err)
 	if err != nil {
 		logging.S().Error(err, delSQLBody)
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
