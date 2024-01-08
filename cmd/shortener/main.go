@@ -13,6 +13,9 @@ import (
 	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
 
 	"github.com/go-chi/chi/v5"
+
+	"net/http/pprof"
+	_ "net/http/pprof"
 )
 
 var (
@@ -38,6 +41,7 @@ func main() {
 		"Starting server",
 		"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
 	)
+
 	logging.S().Fatal(srv.ListenAndServe())
 }
 
@@ -72,5 +76,22 @@ func mainRouter() chi.Router {
 		r.Post("/", shorturl.SetLinkf)
 	})
 
+	addPprof(r)
+
 	return r
+}
+
+func addPprof(r *chi.Mux) {
+	r.HandleFunc("/pprof/*", pprof.Index)
+	r.HandleFunc("/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/pprof/profile", pprof.Profile)
+	r.HandleFunc("/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/pprof/trace", pprof.Trace)
+
+	r.Handle("/pprof/goroutine", pprof.Handler("goroutine"))
+	r.Handle("/pprof/threadcreate", pprof.Handler("threadcreate"))
+	r.Handle("/pprof/mutex", pprof.Handler("mutex"))
+	r.Handle("/pprof/heap", pprof.Handler("heap"))
+	r.Handle("/pprof/block", pprof.Handler("block"))
+	r.Handle("/pprof/allocs", pprof.Handler("allocs"))
 }
