@@ -71,9 +71,13 @@ func TestNetAddress_Set(t *testing.T) {
 		flagValue string
 		wantErr   bool
 	}{
-		{name: "", na: nil, flagValue: "dfdfdff:sdfdfdf", wantErr: true},
+		{name: "a", na: nil, flagValue: "dfdfdff:sdfdfdf", wantErr: true},
+		{name: "b", na: nil, flagValue: ":", wantErr: true},
+		{name: "c", na: nil, flagValue: "aaa:111", wantErr: false},
 	}
 	tests[0].na = new(NetAddress)
+	tests[1].na = new(NetAddress)
+	tests[2].na = new(NetAddress)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.na.Set(tt.flagValue); (err != nil) != tt.wantErr {
