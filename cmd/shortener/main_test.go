@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
+	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
 	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
 )
@@ -88,10 +89,11 @@ func Test_getLink(t *testing.T) {
 }
 
 func Test_setJSONLink(t *testing.T) {
-	//config.ReadData()
-	//surl.SetURLNum(dbf.DBFInit())
-	//defer dbf.DBFClose()
+	config.ReadData()
 	dbf.MakeStorage()
+	shorturl.SetURLNum(dbf.Store.DBFInit())
+	defer dbf.Store.DBFClose()
+
 	tests := []struct {
 		method       string
 		url          string
@@ -107,18 +109,16 @@ func Test_setJSONLink(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.method, func(t *testing.T) {
-			//s := strings.NewReader(tc.body)
-			//r := httptest.NewRequest(tc.method, tc.url, s)
-			//w := httptest.NewRecorder()
-			/*
-				h := shorturl.SetJSONLink()
-				h.ServeHTTP(w, r)
+			s := strings.NewReader(tc.body)
+			r := httptest.NewRequest(tc.method, tc.url, s)
+			w := httptest.NewRecorder()
+			h := shorturl.SetJSONLink()
+			h.ServeHTTP(w, r)
 
-				assert.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
-				if tc.expectedBody != "" {
-					assert.Equal(t, tc.expectedBody, strings.Trim(w.Body.String(), " \n\r"), "Тело ответа не совпадает с ожидаемым")
-				}
-			*/
+			assert.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
+			if tc.expectedBody != "" {
+				assert.Equal(t, tc.expectedBody, strings.Trim(w.Body.String(), " \n\r"), "Тело ответа не совпадает с ожидаемым")
+			}
 		})
 	}
 }
