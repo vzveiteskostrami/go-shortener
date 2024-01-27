@@ -86,19 +86,19 @@ func ReadData() {
 	Storage.DBConnect = *dbc
 
 	var err error
-	err = setSERVER_ADDRESS()
+	err = setSERVERADDRESS()
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = setBASE_URL()
+	err = setBASEURL()
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = setFILE_STORAGE_PATH()
+	err = setFILESTORAGEPATH()
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = setDATABASE_DSN()
+	err = setDATABASEDSN()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -110,7 +110,7 @@ func ReadData() {
 	//Storage.FileName = ""
 }
 
-func setSERVER_ADDRESS() (err error) {
+func setSERVERADDRESS() (err error) {
 	if s, ok := os.LookupEnv("SERVER_ADDRESS"); ok && s != "" {
 		Addresses.In.Host, Addresses.In.Port, err = getAddrAndPort(s)
 		if err != nil {
@@ -120,7 +120,7 @@ func setSERVER_ADDRESS() (err error) {
 	return
 }
 
-func setBASE_URL() (err error) {
+func setBASEURL() (err error) {
 	if s, ok := os.LookupEnv("BASE_URL"); ok && s != "" {
 		Addresses.Out.Host, Addresses.In.Port, err = getAddrAndPort(s)
 		if err != nil {
@@ -130,14 +130,14 @@ func setBASE_URL() (err error) {
 	return
 }
 
-func setFILE_STORAGE_PATH() (err error) {
+func setFILESTORAGEPATH() (err error) {
 	if s, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok && s != "" {
 		Storage.FileName = s
 	}
 	return
 }
 
-func setDATABASE_DSN() (err error) {
+func setDATABASEDSN() (err error) {
 	if s, ok := os.LookupEnv("DATABASE_DSN"); ok && s != "" {
 		Storage.DBConnect = s
 	}
