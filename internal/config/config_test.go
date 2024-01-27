@@ -86,3 +86,19 @@ func TestNetAddress_Set(t *testing.T) {
 		})
 	}
 }
+
+func Test_setSERVER_ADDRESS(t *testing.T) {
+	tests := []struct {
+		name    string
+		wantErr bool
+	}{
+		{"a", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := setSERVER_ADDRESS(); (err != nil) != tt.wantErr {
+				t.Errorf("setSERVER_ADDRESS() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

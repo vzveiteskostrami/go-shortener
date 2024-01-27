@@ -86,11 +86,9 @@ func ReadData() {
 	Storage.DBConnect = *dbc
 
 	var err error
-	if s, ok := os.LookupEnv("SERVER_ADDRESS"); ok && s != "" {
-		Addresses.In.Host, Addresses.In.Port, err = getAddrAndPort(s)
-		if err != nil {
-			fmt.Println("Неудачный парсинг переменной окружения SERVER_ADDRESS")
-		}
+	err = setSERVER_ADDRESS()
+	if err != nil {
+		fmt.Println(err)
 	}
 	if s, ok := os.LookupEnv("BASE_URL"); ok && s != "" {
 		Addresses.Out.Host, Addresses.In.Port, err = getAddrAndPort(s)
@@ -110,4 +108,14 @@ func ReadData() {
 	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=videos password=masterkey dbname=videos sslmode=disable"
 	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=executor password=executor dbname=gophermart sslmode=disable"
 	//Storage.FileName = ""
+}
+
+func setSERVER_ADDRESS() (err error) {
+	if s, ok := os.LookupEnv("SERVER_ADDRESS"); ok && s != "" {
+		Addresses.In.Host, Addresses.In.Port, err = getAddrAndPort(s)
+		if err != nil {
+			fmt.Println("Неудачный парсинг переменной окружения SERVER_ADDRESS")
+		}
+	}
+	return err
 }
