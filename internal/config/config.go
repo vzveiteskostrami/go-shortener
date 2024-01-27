@@ -90,17 +90,17 @@ func ReadData() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if s, ok := os.LookupEnv("BASE_URL"); ok && s != "" {
-		Addresses.Out.Host, Addresses.In.Port, err = getAddrAndPort(s)
-		if err != nil {
-			fmt.Println("Неудачный парсинг переменной окружения BASE_URL")
-		}
+	err = setBASE_URL()
+	if err != nil {
+		fmt.Println(err)
 	}
-	if s, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok && s != "" {
-		Storage.FileName = s
+	err = setFILE_STORAGE_PATH()
+	if err != nil {
+		fmt.Println(err)
 	}
-	if s, ok := os.LookupEnv("DATABASE_DSN"); ok && s != "" {
-		Storage.DBConnect = s
+	err = setDATABASE_DSN()
+	if err != nil {
+		fmt.Println(err)
 	}
 	// сохранена/закомментирована эмуляция указания БД в параметрах вызова.
 	// Необходимо для быстрого перехода тестирования работы приложения с
@@ -117,5 +117,29 @@ func setSERVER_ADDRESS() (err error) {
 			fmt.Println("Неудачный парсинг переменной окружения SERVER_ADDRESS")
 		}
 	}
-	return err
+	return
+}
+
+func setBASE_URL() (err error) {
+	if s, ok := os.LookupEnv("BASE_URL"); ok && s != "" {
+		Addresses.Out.Host, Addresses.In.Port, err = getAddrAndPort(s)
+		if err != nil {
+			fmt.Println("Неудачный парсинг переменной окружения BASE_URL")
+		}
+	}
+	return
+}
+
+func setFILE_STORAGE_PATH() (err error) {
+	if s, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok && s != "" {
+		Storage.FileName = s
+	}
+	return
+}
+
+func setDATABASE_DSN() (err error) {
+	if s, ok := os.LookupEnv("DATABASE_DSN"); ok && s != "" {
+		Storage.DBConnect = s
+	}
+	return
 }
