@@ -18,6 +18,7 @@ func Test_getAddrAndPort(t *testing.T) {
 		{name: "Wrong port", arg: "1122:eeeee", want: "", want1: -1, wantErr: true},
 		{name: "OKey without address", arg: ":1122", want: "", want1: 1122, wantErr: false},
 		{name: "Wrong address and port", arg: ":", want: "", want1: -1, wantErr: true},
+		{name: "Wrong port 2", arg: "1122:", want: "", want1: -1, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
