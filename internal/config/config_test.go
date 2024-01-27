@@ -63,3 +63,22 @@ func TestNetAddress_String(t *testing.T) {
 		})
 	}
 }
+
+func TestNetAddress_Set(t *testing.T) {
+	tests := []struct {
+		name      string
+		na        *NetAddress
+		flagValue string
+		wantErr   bool
+	}{
+		{name: "", na: nil, flagValue: "dfdfdff:sdfdfdf", wantErr: true},
+	}
+	tests[0].na = new(NetAddress)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.na.Set(tt.flagValue); (err != nil) != tt.wantErr {
+				t.Errorf("NetAddress.Set() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
