@@ -1,3 +1,10 @@
+// Сервер сокращения URL. Принимает полный URL на входе, возвращает сокращённый.
+// При обращении по сокращённому URL делает переадресацию на полный URL. Ведение
+// базы данных URL. Поддерживается владелец и действия по вводу новых URL и удаление
+// ненужных.
+// Запуск в командной строке:
+//
+//	shortener [-a=<[in host]:<in port>>] [-b=<[out host]:<out port>>] [-f=<Storage text file name>] [-d=<Database connect string>]
 package main
 
 import (
@@ -18,6 +25,7 @@ import (
 )
 
 var (
+	// srv - сервер http по обработке URL.
 	srv *http.Server
 )
 
@@ -47,10 +55,12 @@ func main() {
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
 
+	// Роуты обслуживания сервиса.
 	r.Route("/api", func(r chi.Router) {
 		r.Use(compressing.GZIPHandle)
 		r.Use(logging.WithLogging)
 		r.Use(auth.AuthHandle)
+		// /shorten - сохранение длинного URL, получение короткого.
 		r.Post("/shorten", shorturl.SetJSONLinkf)
 		r.Post("/shorten/batch", shorturl.SetJSONBatchLinkf)
 		r.Get("/user/urls", shorturl.GetOwnerURLsListf)
