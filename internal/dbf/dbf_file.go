@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
@@ -15,11 +16,21 @@ import (
 )
 
 type FMStorage struct {
-	fStore *os.File
-	store  map[string]StorageURL
+	fStore             *os.File
+	store              map[string]StorageURL
+	needRewriteStorage bool
+	makeOp             sync.Mutex
 }
 
-var needRewriteStorage bool
+func (f *FMStorage) makeStorage() {
+	if f.store == nil {
+		f.makeOp.Lock()
+		defer f.makeOp.Unlock()
+		if f.store == nil {
+			f.store = make(map[string]StorageURL)
+		}
+	}
+}
 
 func (f *FMStorage) DBFInit() int64 {
 	var err error
@@ -38,7 +49,9 @@ func (f *FMStorage) DBFInit() int64 {
 		logging.S().Infof("Открыт файл %s для записи и чтения", config.Storage.FileName)
 	}
 	var nextNumFile int64 = 0
-	nextNumFile, auth.NewOWNERID = f.readStoredData()
+	var newOwnerID int64
+	nextNumFile, newOwnerID = f.readStoredData()
+	auth.SetNewOwnerID(newOwnerID)
 	return nextNumFile
 }
 
@@ -48,9 +61,7 @@ func (f *FMStorage) readStoredData() (int64, int64) {
 	var nextOWNERID int64 = 0
 	storageURLItem := StorageURL{}
 
-	if f.store == nil {
-		f.store = make(map[string]StorageURL)
-	}
+	f.makeStorage()
 
 	if misc.IsNil(f.fStore) {
 		return 0, 0
@@ -82,40 +93,41 @@ func (f *FMStorage) DBFClose() {
 }
 
 func (f *FMStorage) DBFSaveLink(storageURLItem *StorageURL) error {
-	if f.store == nil {
-		f.store = make(map[string]StorageURL)
-	}
-
-	f.store[storageURLItem.ShortURL] = *storageURLItem
-	if f.fStore == nil {
-		return nil
-	}
+	f.makeStorage()
 
 	data, _ := json.Marshal(&storageURLItem)
 	// добавляем перенос строки
 	data = append(data, '\n')
+
+	f.makeOp.Lock()
+	defer f.makeOp.Unlock()
+
+	f.store[storageURLItem.ShortURL] = *storageURLItem
+
+	if f.fStore == nil {
+		return nil
+	}
+
 	_, _ = f.fStore.Write(data)
 
 	return nil
 }
 
 func (f *FMStorage) BeginDel() {
-	needRewriteStorage = false
+	f.needRewriteStorage = false
 }
 
 func (f *FMStorage) AddToDel(surl string) {
-	if f.store == nil {
-		f.store = make(map[string]StorageURL)
-	}
+	f.makeStorage()
 
 	st := f.store[surl]
 	st.Deleted = true
 	f.store[surl] = st
-	needRewriteStorage = true
+	f.needRewriteStorage = true
 }
 
 func (f *FMStorage) EndDel() {
-	if f.fStore == nil || !needRewriteStorage {
+	if f.fStore == nil || !f.needRewriteStorage {
 		return
 	}
 	f.fStore.Close()
@@ -155,6 +167,11 @@ func (f *FMStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 func (f *FMStorage) PrintDBF() {
 }
 
+// [LINT] здесь можно подумать как по другому хранить данные, чтобы поиск был не О(n), а O(1).
+// Можно попробовать использовать map[int64][]StorageUrl. Где int64 - ownerID
+// [OBJECTION] Да, именно здесь поиск убыстрится. Но везде, где идёт прямой поиск URL он
+// замедлится (FindLink, AddToDel). Потому что надо будет перебрать всех овнеров в цикле и
+// внутри каждого искать URL
 func (f *FMStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 	items := make([]StorageURL, 0)
 	item := StorageURL{}

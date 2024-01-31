@@ -87,7 +87,7 @@ func TestNetAddress_Set(t *testing.T) {
 	}
 }
 
-func Test_setSERVERADDRESS(t *testing.T) {
+func Test_setServerAddress(t *testing.T) {
 	tests := []struct {
 		name    string
 		wantErr bool
@@ -96,14 +96,14 @@ func Test_setSERVERADDRESS(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := setSERVERADDRESS(); (err != nil) != tt.wantErr {
-				t.Errorf("setSERVERADDRESS() error = %v, wantErr %v", err, tt.wantErr)
+			if err := setServerAddress(); (err != nil) != tt.wantErr {
+				t.Errorf("setServerAddress() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func Test_setBASEURL(t *testing.T) {
+func Test_setBaseURL(t *testing.T) {
 	tests := []struct {
 		name    string
 		wantErr bool
@@ -112,14 +112,14 @@ func Test_setBASEURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := setBASEURL(); (err != nil) != tt.wantErr {
-				t.Errorf("setBASEURL() error = %v, wantErr %v", err, tt.wantErr)
+			if err := setBaseURL(); (err != nil) != tt.wantErr {
+				t.Errorf("setBaseURL() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func Test_setFILE_STORAGEPATH(t *testing.T) {
+func Test_setFileStoragePath(t *testing.T) {
 	tests := []struct {
 		name    string
 		wantErr bool
@@ -128,14 +128,14 @@ func Test_setFILE_STORAGEPATH(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := setFILESTORAGEPATH(); (err != nil) != tt.wantErr {
-				t.Errorf("setFILESTORAGEPATH() error = %v, wantErr %v", err, tt.wantErr)
+			if err := setFileStoragePath(); (err != nil) != tt.wantErr {
+				t.Errorf("setFileStoragePath() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func Test_setDATABASEDSN(t *testing.T) {
+func Test_setDatabaseDSN(t *testing.T) {
 	tests := []struct {
 		name    string
 		wantErr bool
@@ -144,8 +144,8 @@ func Test_setDATABASEDSN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := setDATABASEDSN(); (err != nil) != tt.wantErr {
-				t.Errorf("setDATABASEDSN() error = %v, wantErr %v", err, tt.wantErr)
+			if err := setDatabaseDSN(); (err != nil) != tt.wantErr {
+				t.Errorf("setDatabaseDSN() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

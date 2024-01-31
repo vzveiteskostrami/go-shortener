@@ -9,7 +9,17 @@ import (
 )
 
 type PGStorage struct {
-	db *sql.DB
+	db         *sql.DB
+	delSQLBody string
+	// [BLOCKER] если в delSQLParams всегда записывается строка, то можно сделать ее как []string
+	// [OBJECTION] У меня тогда перестаёт работать этот execContext. Тип delsQLParams
+	// должен быть как минимум []any.
+	// _, err := d.db.ExecContext(context.Background(), d.delSQLBody, d.delSQLParams...)
+	//
+	// cannot use d.delSQLParams (variable of type []string) as []any value in
+	// argument to d.db.ExecContextcompiler (IncompatibleAssign)
+	//
+	delSQLParams []interface{}
 }
 
 func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {

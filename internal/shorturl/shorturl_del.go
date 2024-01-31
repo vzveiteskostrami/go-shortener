@@ -15,24 +15,17 @@ var (
 
 func GoDel() {
 	delCh = make(chan string)
-	tickCh := make(chan struct{})
-	go func() {
-		defer close(tickCh)
-		for {
-			time.Sleep(300 * time.Millisecond)
-			tickCh <- struct{}{}
-		}
-	}()
+	tick := time.NewTicker(300 * time.Millisecond)
 
 	go func() {
 		defer close(delCh)
+		defer tick.Stop()
 		url := ""
 		wasAdd := false
 		dbf.Store.BeginDel()
 		for {
 			select {
-			//case <-tick:
-			case <-tickCh:
+			case <-tick.C:
 				if wasAdd {
 					dbf.Store.EndDel()
 					dbf.Store.BeginDel()

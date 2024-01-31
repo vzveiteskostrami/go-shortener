@@ -35,6 +35,12 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// [BLOCKER] зачем здесь lock?
+	// [OBJECTION] Для монопольного наращивания переменной currURLNum в случае необходимости.
+	// Наращивание происходит именно здесь, а не в базе. В базе только фиксится результат.
+	// На возражение, что это надо делать в базе, так как там могут несколько пользователей
+	// наращивать счётчик в параллель, есть контрвозражение, что в ТЗ упоминается о монопольной
+	// работе сервиса, и поэтому выбрана "надбазная" реализация наращивания счётчика.
 	lockCounter.Lock()
 	defer lockCounter.Unlock()
 	nextNum := currURLNum
@@ -45,8 +51,6 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 		UUID:     nextNum,
 		OWNERID:  ownerID.(int64),
 		ShortURL: strconv.FormatInt(nextNum, 36)}
-	lockWrite.Lock()
-	defer lockWrite.Unlock()
 	err = dbf.Store.DBFSaveLink(&su)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -82,6 +86,13 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var surl outURL
+	// [BLOCKER] здесь тоже
+	// [OBJECTION] Здесь всё выглядит именно так. Но, во-первых, ниже есть
+	// бэтчевое сохранение присланых URL, и там выгоднее запереть всё сразу сверху,
+	// чем запирать по одной записи. Поэтому здесь просто сохранено однообразие при использовании
+	// DBFSaveLink. А во-вторых, мьютекс здесь вообще бы был лишним (или правильнее, не отпирался бы по defer),
+	// если бы счётчик URL наращивался бы здесь гарантировано. Но это один из вариантов.
+	// Поэтому требует синхронизации. Или переделки способа получения нового URL.
 	lockWrite.Lock()
 	defer lockWrite.Unlock()
 	nextNum := currURLNum

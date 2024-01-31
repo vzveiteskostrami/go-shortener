@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -22,28 +23,32 @@ type Claims struct {
 
 const SecretKey = "pomidoryichesnok"
 
+type tokenServiceStruct struct {
+	NewOWNERID int64
+	locker     sync.Mutex
+}
+
 var (
-	CPownerID     ContextParamName = "OwnerID"
-	CPownerValid  ContextParamName = "OwnerValid"
-	NewOWNERID    int64            = 0
-	lockMakeToken sync.Mutex
+	CPownerID    ContextParamName = "OwnerID"
+	CPownerValid ContextParamName = "OwnerValid"
+	tokenService tokenServiceStruct
 )
 
 func AuthHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var ownerID int64 = 0
 		var token string
-		var ok bool
+		var err error
 		ownerValid := true
 
 		cu, err := r.Cookie("token")
 
 		if err != nil {
 			ownerValid = false
-			token, ownerID, err = makeToken()
-		} else if ownerID, ok = getOwnerID(cu.Value); !ok {
+			token, ownerID, err = tokenService.makeToken()
+		} else if ownerID, err = getOwnerID(cu.Value); err != nil {
 			ownerValid = false
-			token, ownerID, err = makeToken()
+			token, ownerID, err = tokenService.makeToken()
 		}
 
 		if err != nil {
@@ -61,7 +66,7 @@ func AuthHandle(next http.Handler) http.Handler {
 	})
 }
 
-func getOwnerID(tokenString string) (int64, bool) {
+func getOwnerID(tokenString string) (int64, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -72,31 +77,40 @@ func getOwnerID(tokenString string) (int64, bool) {
 
 	if err != nil {
 		logging.S().Errorw(err.Error())
-		return -1, false
+		return 0, err
 	}
 
 	if !token.Valid {
-		logging.S().Errorw("Token is not valid: " + tokenString)
-		return -1, false
+		err := errors.New("Token is not valid: " + tokenString)
+		logging.S().Errorw(err.Error())
+		return 0, err
 	}
 
 	// возвращаем ID пользователя в читаемом виде
-	return claims.OwnerID, true
+	return claims.OwnerID, nil
 }
 
-func makeToken() (string, int64, error) {
-	lockMakeToken.Lock()
-	defer lockMakeToken.Unlock()
-	n := NewOWNERID
+func (t *tokenServiceStruct) makeToken() (string, int64, error) {
+	t.locker.Lock()
+	defer t.locker.Unlock()
+	n := t.NewOWNERID
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
-		OwnerID: NewOWNERID,
+		OwnerID: t.NewOWNERID,
 	})
-	NewOWNERID++
+	t.NewOWNERID++
 
 	tokenString, err := token.SignedString([]byte(SecretKey))
 	if err != nil {
-		return "", -1, err
+		return "", 0, err
 	}
 
 	return tokenString, n, nil
+}
+
+func SetNewOwnerID(n int64) {
+	tokenService.NewOWNERID = n
+}
+
+func init() {
+	tokenService.NewOWNERID = 0
 }

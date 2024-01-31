@@ -41,7 +41,7 @@ func (d *PGStorage) DBFClose() {
 }
 
 func (d *PGStorage) tableInitData() (int64, error) {
-	auth.NewOWNERID = 0
+	auth.SetNewOwnerID(0)
 	if d.db == nil {
 		return -1, errors.New("база данных не инициализирована")
 	}
@@ -69,7 +69,7 @@ func (d *PGStorage) tableInitData() (int64, error) {
 	}
 
 	if mxOwnerID.Valid {
-		auth.NewOWNERID = mxOwnerID.Int64 + 1
+		auth.SetNewOwnerID(mxOwnerID.Int64 + 1)
 	}
 
 	if mxUUID.Valid {
