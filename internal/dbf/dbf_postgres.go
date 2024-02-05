@@ -110,5 +110,5 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 		ok = true
 	}
 
-	return storageURLItem, true
+	return storageURLItem, ok
 }
