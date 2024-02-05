@@ -71,7 +71,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	case <-r.Context().Done():
-		logging.S().Infow("Получение короткого URL прервано на клиентской стороне")
+		logging.S().Infow("Получение короткого URL прервано на клиентской сторонеееее")
 		w.WriteHeader(http.StatusGone)
 	}
 }
