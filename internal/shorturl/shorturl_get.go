@@ -3,21 +3,22 @@ package shorturl
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
+	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 )
 
 func GetLink() http.Handler {
 	return http.HandlerFunc(GetLinkf)
 }
 
+/*
 func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
@@ -36,8 +37,8 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+*/
 
-/*
 func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	//fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
@@ -46,16 +47,16 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 
 	completed := make(chan struct{})
 	url := dbf.StorageURL{}
-	ok := false
+	err := errors.New("")
 
 	go func() {
-		url, ok = dbf.Store.FindLink(r.Context(), link, true)
+		url, err = dbf.Store.FindLink(r.Context(), link, true)
 		completed <- struct{}{}
 	}()
 
 	select {
 	case <-completed:
-		if !ok {
+		if err != nil {
 			http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
 		} else {
 			//logging.S().Info("find LINK#", link)
@@ -74,8 +75,8 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusGone)
 	}
 }
-*/
 
+/*
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
@@ -118,8 +119,8 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(buf.Bytes())
 }
+*/
 
-/*
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	///fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
@@ -134,7 +135,7 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		ownerID = r.Context().Value(auth.CPownerID).(int64)
-		urls, err = dbf.Store.DBFGetOwnURLs(ownerID)
+		urls, err = dbf.Store.DBFGetOwnURLs(r.Context(), ownerID)
 		completed <- struct{}{}
 	}()
 
@@ -174,4 +175,3 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusGone)
 	}
 }
-*/

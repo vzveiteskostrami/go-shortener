@@ -23,7 +23,8 @@ type PGStorage struct {
 }
 
 func (d *PGStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error) {
-	rows, err := d.db.QueryContext(ctx, "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
+	//rows, err := d.db.QueryContext(ctx, "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
+	rows, err := d.db.QueryContext(context.Background(), "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
 	if err != nil {
 		logging.S().Error(err)
 		return nil, err
@@ -85,7 +86,8 @@ func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (Sto
 	} else {
 		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG from urlstore WHERE originalurl=$1;"
 	}
-	rows, err := d.db.QueryContext(ctx, sbody, link)
+	//rows, err := d.db.QueryContext(ctx, sbody, link)
+	rows, err := d.db.QueryContext(context.Background(), sbody, link)
 	if err != nil {
 		logging.S().Error(err)
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
