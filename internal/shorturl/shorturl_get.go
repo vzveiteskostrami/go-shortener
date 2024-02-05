@@ -2,8 +2,11 @@ package shorturl
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -17,10 +20,13 @@ func GetLink() http.Handler {
 }
 
 func GetLinkf(w http.ResponseWriter, r *http.Request) {
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
 
-	url, err := dbf.Store.FindLink(r.Context(), link, true)
+	//url, err := dbf.Store.FindLink(r.Context(), link, true)
+	url, err := dbf.Store.FindLink(context.Background(), link, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
