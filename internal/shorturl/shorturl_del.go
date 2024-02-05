@@ -72,3 +72,27 @@ func GoDel() {
 		}
 	}()
 }
+
+func DoDel() {
+	delCh = make(chan string)
+	tick := time.NewTicker(300 * time.Millisecond)
+
+	defer close(delCh)
+	defer tick.Stop()
+	url := ""
+	wasAdd := false
+	dbf.Store.BeginDel()
+	for {
+		select {
+		case <-tick.C:
+			if wasAdd {
+				dbf.Store.EndDel()
+				dbf.Store.BeginDel()
+				wasAdd = false
+			}
+		case url = <-delCh:
+			dbf.Store.AddToDel(url)
+			wasAdd = true
+		}
+	}
+}
