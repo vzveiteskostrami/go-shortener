@@ -72,7 +72,6 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-/*
 func GoDel() {
 	delCh = make(chan string)
 	tick := time.NewTicker(300 * time.Millisecond)
@@ -98,4 +97,3 @@ func GoDel() {
 		}
 	}()
 }
-*/

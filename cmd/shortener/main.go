@@ -36,7 +36,7 @@ func main() {
 	dbf.MakeStorage()
 	shorturl.SetURLNum(dbf.Store.DBFInit())
 	defer dbf.Store.DBFClose()
-	go shorturl.DoDel()
+	shorturl.GoDel()
 
 	srv = &http.Server{
 		Addr:        config.Addresses.In.Host + ":" + strconv.Itoa(config.Addresses.In.Port),
