@@ -3,7 +3,6 @@ package shorturl
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -18,27 +17,6 @@ func GetLink() http.Handler {
 	return http.HandlerFunc(GetLinkf)
 }
 
-/*
-func GetLinkf(w http.ResponseWriter, r *http.Request) {
-	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
-	w.Header().Set("Content-Type", "text/plain")
-	link := chi.URLParam(r, "shlink")
-
-	url, err := dbf.Store.FindLink(r.Context(), link, true)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	} else {
-		if url.Deleted {
-			w.WriteHeader(http.StatusGone)
-		} else {
-			w.Header().Set("Location", url.OriginalURL)
-			w.WriteHeader(http.StatusTemporaryRedirect)
-		}
-	}
-}
-*/
-
 func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	//fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
@@ -47,16 +25,16 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 
 	completed := make(chan struct{})
 	url := dbf.StorageURL{}
-	err := errors.New("")
+	ok := false
 
 	go func() {
-		url, err = dbf.Store.FindLink(link, true)
+		url, ok = dbf.Store.FindLink(link, true)
 		completed <- struct{}{}
 	}()
 
 	select {
 	case <-completed:
-		if err != nil {
+		if !ok {
 			http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
 		} else {
 			//logging.S().Info("find LINK#", link)

@@ -3,7 +3,6 @@ package dbf
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"io/fs"
 	"net/http"
 	"os"
@@ -146,43 +145,19 @@ func (f *FMStorage) EndDel() {
 	}
 }
 
-func (f *FMStorage) FindLink(link string, byLink bool) (StorageURL, error) {
-	err := errors.New("не найдено в списке")
+func (f *FMStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 	if byLink {
 		url, ok := f.store[link]
-		if ok {
-			err = nil
-		}
-		return url, err
+		return url, ok
 	} else {
 		for s, url := range f.store {
 			if s == link {
-				return url, nil
+				return url, true
 			}
 		}
-		return StorageURL{}, err
+		return StorageURL{}, false
 	}
 }
-
-/*
-func (f *FMStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error) {
-	err := errors.New("не найдено в списке")
-	if byLink {
-		url, ok := f.store[link]
-		if ok {
-			err = nil
-		}
-		return url, err
-	} else {
-		for s, url := range f.store {
-			if s == link {
-				return url, nil
-			}
-		}
-		return StorageURL{}, err
-	}
-}
-*/
 
 func (f *FMStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")

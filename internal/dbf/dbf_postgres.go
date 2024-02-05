@@ -23,7 +23,6 @@ type PGStorage struct {
 }
 
 func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
-	//rows, err := d.db.QueryContext(ctx, "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
 	rows, err := d.db.QueryContext(context.Background(), "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
 	if err != nil {
 		logging.S().Error(err)
@@ -49,8 +48,8 @@ func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 }
 
 func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
-	su, err := d.FindLink(storageURLItem.OriginalURL, false)
-	if err == nil {
+	su, ok := d.FindLink(storageURLItem.OriginalURL, false)
+	if ok {
 		storageURLItem.UUID = su.UUID
 		storageURLItem.OWNERID = su.OWNERID
 		storageURLItem.ShortURL = su.ShortURL
@@ -78,7 +77,7 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 	return nil
 }
 
-func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, error) {
+func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 	storageURLItem := StorageURL{}
 	sbody := ``
 	if byLink {
@@ -86,20 +85,19 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, error) {
 	} else {
 		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG from urlstore WHERE originalurl=$1;"
 	}
-	//rows, err := d.db.QueryContext(ctx, sbody, link)
 	rows, err := d.db.QueryContext(context.Background(), sbody, link)
 	if err != nil {
 		logging.S().Error(err)
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 		//fmt.Fprintln(os.Stdout, "оппа!", err)
-		return StorageURL{}, err
+		return StorageURL{}, false
 	}
 	if rows.Err() != nil {
 		err = rows.Err()
 		logging.S().Error(err)
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 		//fmt.Fprintln(os.Stdout, "Оппа два!", rows.Err().Error())
-		return StorageURL{}, err
+		return StorageURL{}, false
 	}
 	defer rows.Close()
 
@@ -112,5 +110,5 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, error) {
 		ok = true
 	}
 
-	return storageURLItem, nil
+	return storageURLItem, true
 }

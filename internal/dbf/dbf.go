@@ -23,10 +23,8 @@ type GSStorage interface {
 	DBFInit() int64
 	DBFClose()
 	DBFSaveLink(storageURLItem *StorageURL) error
-	//	FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error)
 	PingDBf(w http.ResponseWriter, r *http.Request)
-	FindLink(link string, byLink bool) (StorageURL, error)
-	//	DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error)
+	FindLink(link string, byLink bool) (StorageURL, bool)
 	DBFGetOwnURLs(ownerID int64) ([]StorageURL, error)
 
 	AddToDel(surl string)
