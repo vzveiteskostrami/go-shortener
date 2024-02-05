@@ -19,7 +19,7 @@ func SetLink() http.Handler {
 
 func SetLinkf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	//fmt.Fprintln(os.Stdout, "**************", "SetLinkf")
+	fmt.Fprintln(os.Stdout, "**************", "SetLinkf")
 	w.Header().Set("Content-Type", "text/plain")
 	b, err := io.ReadAll(r.Body)
 	if err != nil {

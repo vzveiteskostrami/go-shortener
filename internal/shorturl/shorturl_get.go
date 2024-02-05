@@ -2,7 +2,6 @@ package shorturl
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,8 +24,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
 
-	//url, err := dbf.Store.FindLink(r.Context(), link, true)
-	url, err := dbf.Store.FindLink(context.Background(), link, true)
+	url, err := dbf.Store.FindLink(r.Context(), link, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
@@ -80,7 +78,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	///fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
 	w.Header().Set("Content-Type", "application/json")
 
 	var (

@@ -3,7 +3,9 @@ package shorturl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
@@ -40,7 +42,7 @@ func DoDel() {
 
 func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "DeleteOwnerURLsListf")
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "DeleteOwnerURLsListf")
 	w.Header().Set("Content-Type", "text/plain")
 
 	var surls []string
@@ -51,7 +53,7 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", surls)
+	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", surls)
 	ownerID := r.Context().Value(auth.CPownerID).(int64)
 
 	go func() {
