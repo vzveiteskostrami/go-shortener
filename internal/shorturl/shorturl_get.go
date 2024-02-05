@@ -10,13 +10,30 @@ import (
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
-	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 )
 
 func GetLink() http.Handler {
 	return http.HandlerFunc(GetLinkf)
 }
 
+func GetLinkf(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	link := chi.URLParam(r, "shlink")
+
+	url, err := dbf.Store.FindLink(r.Context(), link, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	} else {
+		if url.Deleted {
+			w.WriteHeader(http.StatusGone)
+		} else {
+			w.Header().Set("Location", url.OriginalURL)
+			w.WriteHeader(http.StatusTemporaryRedirect)
+		}
+	}
+}
+
+/*
 func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	//fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
@@ -28,7 +45,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	ok := false
 
 	go func() {
-		url, ok = dbf.Store.FindLink(link, true)
+		url, ok = dbf.Store.FindLink(r.Context(), link, true)
 		completed <- struct{}{}
 	}()
 
@@ -53,7 +70,52 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusGone)
 	}
 }
+*/
 
+func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	///fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
+	w.Header().Set("Content-Type", "application/json")
+
+	var (
+		ownerID int64
+		urls    []dbf.StorageURL
+		err     error
+	)
+	ownerID = r.Context().Value(auth.CPownerID).(int64)
+	urls, err = dbf.Store.DBFGetOwnURLs(r.Context(), ownerID)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	links := make([]cmnURL, 0)
+	for _, url := range urls {
+		if url.OriginalURL != "" {
+			link := cmnURL{}
+			link.ShortURL = new(string)
+			link.OriginalURL = new(string)
+			*link.ShortURL = config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + url.ShortURL
+			*link.OriginalURL = url.OriginalURL
+			links = append(links, link)
+		}
+	}
+
+	if len(links) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(links); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Write(buf.Bytes())
+}
+
+/*
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	///fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
@@ -108,3 +170,4 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusGone)
 	}
 }
+*/

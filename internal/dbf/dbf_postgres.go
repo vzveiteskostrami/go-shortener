@@ -22,8 +22,8 @@ type PGStorage struct {
 	delSQLParams []interface{}
 }
 
-func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
-	rows, err := d.db.QueryContext(context.Background(), "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
+func (d *PGStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error) {
+	rows, err := d.db.QueryContext(ctx, "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
 	if err != nil {
 		logging.S().Error(err)
 		return nil, err
@@ -48,8 +48,8 @@ func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 }
 
 func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
-	su, ok := d.FindLink(storageURLItem.OriginalURL, false)
-	if ok {
+	su, err := d.FindLink(context.Background(), storageURLItem.OriginalURL, false)
+	if err == nil {
 		storageURLItem.UUID = su.UUID
 		storageURLItem.OWNERID = su.OWNERID
 		storageURLItem.ShortURL = su.ShortURL
@@ -77,7 +77,7 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 	return nil
 }
 
-func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
+func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error) {
 	storageURLItem := StorageURL{}
 	sbody := ``
 	if byLink {
@@ -85,18 +85,19 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 	} else {
 		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG from urlstore WHERE originalurl=$1;"
 	}
-	rows, err := d.db.QueryContext(context.Background(), sbody, link)
+	rows, err := d.db.QueryContext(ctx, sbody, link)
 	if err != nil {
-		logging.S().Panic(err)
+		logging.S().Error(err)
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 		//fmt.Fprintln(os.Stdout, "оппа!", err)
-		return StorageURL{}, false
+		return StorageURL{}, err
 	}
 	if rows.Err() != nil {
-		logging.S().Panic(rows.Err())
+		err = rows.Err()
+		logging.S().Error(err)
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 		//fmt.Fprintln(os.Stdout, "Оппа два!", rows.Err().Error())
-		return StorageURL{}, false
+		return StorageURL{}, err
 	}
 	defer rows.Close()
 
@@ -109,5 +110,5 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 		ok = true
 	}
 
-	return storageURLItem, ok
+	return storageURLItem, nil
 }
