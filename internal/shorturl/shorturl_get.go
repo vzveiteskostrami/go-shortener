@@ -50,7 +50,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	err := errors.New("")
 
 	go func() {
-		url, err = dbf.Store.FindLink(r.Context(), link, true)
+		url, err = dbf.Store.FindLink(link, true)
 		completed <- struct{}{}
 	}()
 
@@ -135,7 +135,7 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		ownerID = r.Context().Value(auth.CPownerID).(int64)
-		urls, err = dbf.Store.DBFGetOwnURLs(r.Context(), ownerID)
+		urls, err = dbf.Store.DBFGetOwnURLs(ownerID)
 		completed <- struct{}{}
 	}()
 

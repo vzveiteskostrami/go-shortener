@@ -22,7 +22,7 @@ type PGStorage struct {
 	delSQLParams []interface{}
 }
 
-func (d *PGStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error) {
+func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 	//rows, err := d.db.QueryContext(ctx, "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
 	rows, err := d.db.QueryContext(context.Background(), "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
 	if err != nil {
@@ -49,7 +49,7 @@ func (d *PGStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]Storage
 }
 
 func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
-	su, err := d.FindLink(context.Background(), storageURLItem.OriginalURL, false)
+	su, err := d.FindLink(storageURLItem.OriginalURL, false)
 	if err == nil {
 		storageURLItem.UUID = su.UUID
 		storageURLItem.OWNERID = su.OWNERID
@@ -78,7 +78,7 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 	return nil
 }
 
-func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error) {
+func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, error) {
 	storageURLItem := StorageURL{}
 	sbody := ``
 	if byLink {

@@ -2,7 +2,6 @@ package dbf
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -147,7 +146,7 @@ func (f *FMStorage) EndDel() {
 	}
 }
 
-func (f *FMStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error) {
+func (f *FMStorage) FindLink(link string, byLink bool) (StorageURL, error) {
 	err := errors.New("не найдено в списке")
 	if byLink {
 		url, ok := f.store[link]
@@ -165,6 +164,26 @@ func (f *FMStorage) FindLink(ctx context.Context, link string, byLink bool) (Sto
 	}
 }
 
+/*
+func (f *FMStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error) {
+	err := errors.New("не найдено в списке")
+	if byLink {
+		url, ok := f.store[link]
+		if ok {
+			err = nil
+		}
+		return url, err
+	} else {
+		for s, url := range f.store {
+			if s == link {
+				return url, nil
+			}
+		}
+		return StorageURL{}, err
+	}
+}
+*/
+
 func (f *FMStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
@@ -178,7 +197,7 @@ func (f *FMStorage) PrintDBF() {
 // [OBJECTION] Да, именно здесь поиск убыстрится. Но везде, где идёт прямой поиск URL он
 // замедлится (FindLink, AddToDel). Потому что надо будет перебрать всех овнеров в цикле и
 // внутри каждого искать URL
-func (f *FMStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error) {
+func (f *FMStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 	items := make([]StorageURL, 0)
 	item := StorageURL{}
 	for _, url := range f.store {
