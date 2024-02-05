@@ -148,7 +148,7 @@ func (f *FMStorage) EndDel() {
 }
 
 func (f *FMStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error) {
-	err := errors.New("Не найдено в списке")
+	err := errors.New("не найдено в списке")
 	if byLink {
 		url, ok := f.store[link]
 		if ok {
