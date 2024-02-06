@@ -49,6 +49,11 @@ func (d *PGStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]Storage
 }
 
 func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
+	//[LINT] здесь лучше тоже прокидывать context, а не использовать Background
+	//[OBJECTION] Здесь происходит сохранение данных, а не получение.
+	// Если при получении данных пользователь отвалился, то нам да, незачем продолжать
+	// работу. Она никому не нужна. Если он отвалился во время записи данных, нас
+	// это мало волнует. У нас есь всё, чтобы сохранить данные, и в отсутствии пользователя.
 	su, err := d.FindLink(context.Background(), storageURLItem.OriginalURL, false)
 	if err == nil {
 		storageURLItem.UUID = su.UUID

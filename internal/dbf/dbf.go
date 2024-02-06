@@ -41,3 +41,17 @@ type StorageURL struct {
 	OriginalURL string `json:"original_url"`
 	Deleted     bool   `json:"deleted"`
 }
+
+/*
+func TstWg() {
+	var wg sync.WaitGroup
+	for _, v := range []int{0, 1, 2, 3} {
+		wg.Add(1)
+		go func() {
+			fmt.Print(v)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
+*/
