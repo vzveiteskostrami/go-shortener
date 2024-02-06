@@ -17,6 +17,7 @@ func GetLink() http.Handler {
 	return http.HandlerFunc(GetLinkf)
 }
 
+/*
 func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	//fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
@@ -51,6 +52,30 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	case <-r.Context().Done():
 		logging.S().Infow("Получение короткого URL прервано на клиентской сторонеееее")
 		w.WriteHeader(http.StatusGone)
+	}
+}
+*/
+
+func GetLinkf(w http.ResponseWriter, r *http.Request) {
+	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+	//fmt.Fprintln(os.Stdout, "##############", "GetLinkf")
+	w.Header().Set("Content-Type", "text/plain")
+	link := chi.URLParam(r, "shlink")
+
+	url, ok := dbf.Store.FindLink(r.Context(), link, true)
+	if !ok {
+		http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
+	} else {
+		//logging.S().Info("find LINK#", link)
+
+		if url.Deleted {
+			//logging.S().Info("find LINK# DELETED")
+			w.WriteHeader(http.StatusGone)
+		} else {
+			//logging.S().Info("find LINK# GODNYY")
+			w.Header().Set("Location", url.OriginalURL)
+			w.WriteHeader(http.StatusTemporaryRedirect)
+		}
 	}
 }
 
