@@ -1,6 +1,6 @@
 module mycheck
 
-go 1.21.5
+go 1.21
 
 require golang.org/x/tools v0.17.0
 
