@@ -4,131 +4,123 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"net/http"
 
 	_ "github.com/lib/pq"
-	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 )
 
 type PGStorage struct {
-	db *sql.DB
+	db         *sql.DB
+	delSQLBody string
+	// [BLOCKER] если в delSQLParams всегда записывается строка, то можно сделать ее как []string
+	// [OBJECTION] У меня тогда перестаёт работать этот execContext. Тип delsQLParams
+	// должен быть как минимум []any.
+	// _, err := d.db.ExecContext(context.Background(), d.delSQLBody, d.delSQLParams...)
+	//
+	// cannot use d.delSQLParams (variable of type []string) as []any value in
+	// argument to d.db.ExecContextcompiler (IncompatibleAssign)
+	//
+	delSQLParams []interface{}
 }
 
-func (d *PGStorage) DBFInit() int64 {
-	var err error
-
-	d.db, err = sql.Open("postgres", config.Storage.DBConnect)
+func (d *PGStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error) {
+	rows, err := d.db.QueryContext(ctx, "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
 	if err != nil {
-		logging.S().Panic(err)
+		logging.S().Error(err)
+		return nil, err
 	}
-	logging.S().Infof("Объявлено соединение с %s", config.Storage.DBConnect)
+	if rows.Err() != nil {
+		logging.S().Error(rows.Err())
+		return nil, rows.Err()
+	}
+	defer rows.Close()
 
-	err = d.db.Ping()
-	if err != nil {
-		logging.S().Panic(err)
-	}
-	logging.S().Infof("Установлено соединение с %s", config.Storage.DBConnect)
-	nextNumDB, err := d.tableInitData()
-	if err != nil {
-		logging.S().Panic(err)
-	}
-	return nextNumDB
-}
-
-func (d *PGStorage) DBFClose() {
-	if d.db != nil {
-		d.db.Close()
-	}
-}
-
-func (d *PGStorage) tableInitData() (int64, error) {
-	if d.db == nil {
-		return -1, errors.New("база данных не инициализирована")
-	}
-	_, err := d.db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS urlstore(UUID bigint NOT NULL,SHORTURL character varying(1000) NOT NULL,ORIGINALURL character varying(1000) NOT NULL);CREATE UNIQUE INDEX IF NOT EXISTS urlstore1 ON urlstore (ORIGINALURL);")
-	if err != nil {
-		return -1, err
-	}
-	logging.S().Infof("Таблица URLSTORE либо существовала, либо создана")
-	var mx sql.NullInt64
-
-	row := d.db.QueryRowContext(context.Background(), "SELECT MAX(UUID) as MX FROM urlstore;")
-	if row.Err() != nil {
-		return -1, row.Err()
-	}
-
-	if err = row.Scan(&mx); err != nil {
-		if err == sql.ErrNoRows {
-			return 0, nil
-		} else {
-			return -1, err
+	items := make([]StorageURL, 0)
+	item := StorageURL{}
+	for rows.Next() {
+		err = rows.Scan(&item.ShortURL, &item.OriginalURL)
+		if err != nil {
+			logging.S().Error()
+			return nil, err
 		}
+		items = append(items, item)
 	}
-
-	if mx.Valid {
-		return mx.Int64 + 1, nil
-	} else {
-		return 0, nil
-	}
+	return items, nil
 }
 
-func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) {
-	su, ok := d.FindLink(storageURLItem.OriginalURL, false)
-	if ok {
+func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
+	//[LINT] здесь лучше тоже прокидывать context, а не использовать Background
+	//[OBJECTION] Здесь происходит сохранение данных, а не получение.
+	// Если при получении данных пользователь отвалился, то нам да, незачем продолжать
+	// работу. Она никому не нужна. Если он отвалился во время записи данных, нас
+	// это мало волнует. У нас есь всё, чтобы сохранить данные, и в отсутствии пользователя.
+	su, err := d.FindLink(context.Background(), storageURLItem.OriginalURL, false)
+	if err == nil {
 		storageURLItem.UUID = su.UUID
+		storageURLItem.OWNERID = su.OWNERID
 		storageURLItem.ShortURL = su.ShortURL
+		storageURLItem.Deleted = su.Deleted
 	} else {
-		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (UUID,SHORTURL,ORIGINALURL) VALUES ($1,$2,$3);",
+		//lockWrite.Lock()
+		//defer lockWrite.Unlock()
+		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG) VALUES ($1,$2,$3,$4,$5);",
+			storageURLItem.OWNERID,
 			storageURLItem.UUID,
 			storageURLItem.ShortURL,
-			storageURLItem.OriginalURL)
+			storageURLItem.OriginalURL,
+			storageURLItem.Deleted)
 		if err != nil {
-			logging.S().Panic(err)
+			// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+			//fmt.Fprintln(os.Stdout, "Мы здесь!", err.Error())
+			logging.S().Error(err)
+			return err
 		}
+		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+		//else {
+		//		fmt.Fprintln(os.Stdout, "Вставка "+storageURLItem.OriginalURL)
+		//	}
 	}
+	return nil
 }
 
-func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
+func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error) {
 	storageURLItem := StorageURL{}
 	sbody := ``
 	if byLink {
-		sbody = "SELECT UUID,SHORTURL,ORIGINALURL from urlstore WHERE shorturl=$1;"
+		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG from urlstore WHERE shorturl=$1;"
 	} else {
-		sbody = "SELECT UUID,SHORTURL,ORIGINALURL from urlstore WHERE originalurl=$1;"
+		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG from urlstore WHERE originalurl=$1;"
 	}
-	rows, err := d.db.QueryContext(context.Background(), sbody, link)
+	rows, err := d.db.QueryContext(ctx, sbody, link)
 	if err != nil {
-		logging.S().Panic(err)
+		logging.S().Error(err)
+		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+		//fmt.Fprintln(os.Stdout, "оппа!", err)
+		return StorageURL{}, err
 	}
 	if rows.Err() != nil {
-		logging.S().Panic(rows.Err())
+		err = rows.Err()
+		logging.S().Error(err)
+		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
+		//fmt.Fprintln(os.Stdout, "Оппа два!", rows.Err().Error())
+		return StorageURL{}, err
 	}
 	defer rows.Close()
 
 	ok := false
 	for !ok && rows.Next() {
-		err = rows.Scan(&storageURLItem.UUID, &storageURLItem.ShortURL, &storageURLItem.OriginalURL)
+		err = rows.Scan(&storageURLItem.OWNERID, &storageURLItem.UUID, &storageURLItem.ShortURL, &storageURLItem.OriginalURL, &storageURLItem.Deleted)
 		if err != nil {
 			logging.S().Panic(err)
 		}
 		ok = true
 	}
-	return storageURLItem, ok
-}
 
-func (d *PGStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-
-	if d.db == nil {
-		http.Error(w, `База данных не открыта`, http.StatusInternalServerError)
-		return
+	if !ok {
+		//Приходится искусственно создавать ошибку, чтобы не возвращать bool
+		//Денис считает что bool возвращать плохо. Я спорить не буду.
+		err = errors.New("не ошибка, но надо же что-то вернуть")
 	}
 
-	err := d.db.Ping()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
+	return storageURLItem, err
 }

@@ -86,24 +86,60 @@ func ReadData() {
 	Storage.DBConnect = *dbc
 
 	var err error
+	err = setServerAddress()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = setBaseURL()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = setFileStoragePath()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = setDatabaseDSN()
+	if err != nil {
+		fmt.Println(err)
+	}
+	// сохранена/закомментирована эмуляция указания БД в параметрах вызова.
+	// Необходимо для быстрого перехода тестирования работы приложения с
+	// Postgres.
+	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=videos password=masterkey dbname=videos sslmode=disable"
+	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=executor password=executor dbname=gophermart sslmode=disable"
+	//Storage.FileName = ""
+}
+
+func setServerAddress() (err error) {
 	if s, ok := os.LookupEnv("SERVER_ADDRESS"); ok && s != "" {
 		Addresses.In.Host, Addresses.In.Port, err = getAddrAndPort(s)
 		if err != nil {
 			fmt.Println("Неудачный парсинг переменной окружения SERVER_ADDRESS")
 		}
 	}
+	return
+}
+
+func setBaseURL() (err error) {
 	if s, ok := os.LookupEnv("BASE_URL"); ok && s != "" {
 		Addresses.Out.Host, Addresses.In.Port, err = getAddrAndPort(s)
 		if err != nil {
 			fmt.Println("Неудачный парсинг переменной окружения BASE_URL")
 		}
 	}
+	return
+}
+
+func setFileStoragePath() (err error) {
 	if s, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok && s != "" {
 		Storage.FileName = s
 	}
+	return
+}
+
+func setDatabaseDSN() (err error) {
 	if s, ok := os.LookupEnv("DATABASE_DSN"); ok && s != "" {
 		Storage.DBConnect = s
 	}
-	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=videos password=masterkey dbname=videos sslmode=disable"
-	//Storage.FileName = ""
+	return
 }
