@@ -178,7 +178,7 @@ func (f *FMStorage) PrintDBF() {
 // [OBJECTION] Да, именно здесь поиск убыстрится. Но везде, где идёт прямой поиск URL он
 // замедлится (FindLink, AddToDel). Потому что надо будет перебрать всех овнеров в цикле и
 // внутри каждого искать URL
-func (f *FMStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
+func (f *FMStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error) {
 	items := make([]StorageURL, 0)
 	item := StorageURL{}
 	for _, url := range f.store {

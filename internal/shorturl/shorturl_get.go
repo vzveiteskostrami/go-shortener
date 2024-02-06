@@ -10,7 +10,6 @@ import (
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
-	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 )
 
 func GetLink() http.Handler {
@@ -79,10 +78,9 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
+	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
 	w.Header().Set("Content-Type", "application/json")
 
 	var (
@@ -122,8 +120,8 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(buf.Bytes())
 }
-*/
 
+/*
 func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	///fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "GetOwnerURLsListf")
@@ -178,3 +176,4 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusGone)
 	}
 }
+*/

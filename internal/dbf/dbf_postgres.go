@@ -23,8 +23,8 @@ type PGStorage struct {
 	delSQLParams []interface{}
 }
 
-func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
-	rows, err := d.db.QueryContext(context.Background(), "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
+func (d *PGStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error) {
+	rows, err := d.db.QueryContext(ctx, "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
 	if err != nil {
 		logging.S().Error(err)
 		return nil, err
