@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net/http"
 	"os"
@@ -146,17 +147,21 @@ func (f *FMStorage) EndDel() {
 	}
 }
 
-func (f *FMStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, bool) {
+func (f *FMStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error) {
+	err := errors.New("не найдено")
 	if byLink {
 		url, ok := f.store[link]
-		return url, ok
+		if ok {
+			err = nil
+		}
+		return url, err
 	} else {
 		for s, url := range f.store {
 			if s == link {
-				return url, true
+				return url, nil
 			}
 		}
-		return StorageURL{}, false
+		return StorageURL{}, err
 	}
 }
 

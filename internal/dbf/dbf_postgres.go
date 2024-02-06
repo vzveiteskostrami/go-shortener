@@ -3,6 +3,7 @@ package dbf
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	_ "github.com/lib/pq"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
@@ -48,8 +49,8 @@ func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 }
 
 func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
-	su, ok := d.FindLink(context.Background(), storageURLItem.OriginalURL, false)
-	if ok {
+	su, err := d.FindLink(context.Background(), storageURLItem.OriginalURL, false)
+	if err == nil {
 		storageURLItem.UUID = su.UUID
 		storageURLItem.OWNERID = su.OWNERID
 		storageURLItem.ShortURL = su.ShortURL
@@ -77,7 +78,7 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 	return nil
 }
 
-func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, bool) {
+func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error) {
 	storageURLItem := StorageURL{}
 	sbody := ``
 	if byLink {
@@ -90,14 +91,14 @@ func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (Sto
 		logging.S().Error(err)
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 		//fmt.Fprintln(os.Stdout, "оппа!", err)
-		return StorageURL{}, false
+		return StorageURL{}, err
 	}
 	if rows.Err() != nil {
 		err = rows.Err()
 		logging.S().Error(err)
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 		//fmt.Fprintln(os.Stdout, "Оппа два!", rows.Err().Error())
-		return StorageURL{}, false
+		return StorageURL{}, err
 	}
 	defer rows.Close()
 
@@ -110,5 +111,11 @@ func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (Sto
 		ok = true
 	}
 
-	return storageURLItem, ok
+	if !ok {
+		//Приходится искусственно создавать ошибку, чтобы не возвращать bool
+		//Денис считает что bool возвращать плохо. Я спорить не буду.
+		err = errors.New("не ошибка, но надо же что-то вернуть")
+	}
+
+	return storageURLItem, err
 }

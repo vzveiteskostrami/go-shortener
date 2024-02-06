@@ -29,13 +29,13 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", surls)
+	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", surls)
 	ownerID := r.Context().Value(auth.CPownerID).(int64)
 
 	go func() {
 		surl := ""
 		for _, data := range surls {
-			if url, ok := dbf.Store.FindLink(context.Background(), data, true); ok {
+			if url, err := dbf.Store.FindLink(context.Background(), data, true); err == nil {
 				if !url.Deleted && url.OWNERID == ownerID {
 					surl = data
 				}

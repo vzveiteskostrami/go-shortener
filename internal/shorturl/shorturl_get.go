@@ -62,8 +62,8 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	link := chi.URLParam(r, "shlink")
 
-	url, ok := dbf.Store.FindLink(r.Context(), link, true)
-	if !ok {
+	url, err := dbf.Store.FindLink(r.Context(), link, true)
+	if err != nil {
 		http.Error(w, `Не найден shortURL `+link, http.StatusBadRequest)
 	} else {
 		//logging.S().Info("find LINK#", link)
