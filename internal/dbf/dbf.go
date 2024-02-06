@@ -1,6 +1,7 @@
 package dbf
 
 import (
+	"context"
 	"net/http"
 
 	_ "github.com/lib/pq"
@@ -24,7 +25,7 @@ type GSStorage interface {
 	DBFClose()
 	DBFSaveLink(storageURLItem *StorageURL) error
 	PingDBf(w http.ResponseWriter, r *http.Request)
-	FindLink(link string, byLink bool) (StorageURL, bool)
+	FindLink(ctx context.Context, link string, byLink bool) (StorageURL, bool)
 	DBFGetOwnURLs(ownerID int64) ([]StorageURL, error)
 
 	AddToDel(surl string)

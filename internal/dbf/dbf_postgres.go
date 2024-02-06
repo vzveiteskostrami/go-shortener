@@ -48,7 +48,7 @@ func (d *PGStorage) DBFGetOwnURLs(ownerID int64) ([]StorageURL, error) {
 }
 
 func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
-	su, ok := d.FindLink(storageURLItem.OriginalURL, false)
+	su, ok := d.FindLink(context.Background(), storageURLItem.OriginalURL, false)
 	if ok {
 		storageURLItem.UUID = su.UUID
 		storageURLItem.OWNERID = su.OWNERID
@@ -77,7 +77,7 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 	return nil
 }
 
-func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
+func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, bool) {
 	storageURLItem := StorageURL{}
 	sbody := ``
 	if byLink {
@@ -85,7 +85,7 @@ func (d *PGStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
 	} else {
 		sbody = "SELECT OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG from urlstore WHERE originalurl=$1;"
 	}
-	rows, err := d.db.QueryContext(context.Background(), sbody, link)
+	rows, err := d.db.QueryContext(ctx, sbody, link)
 	if err != nil {
 		logging.S().Error(err)
 		// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.

@@ -1,6 +1,7 @@
 package shorturl
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -34,7 +35,7 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		surl := ""
 		for _, data := range surls {
-			if url, ok := dbf.Store.FindLink(data, true); ok {
+			if url, ok := dbf.Store.FindLink(context.Background(), data, true); ok {
 				if !url.Deleted && url.OWNERID == ownerID {
 					surl = data
 				}

@@ -1,6 +1,7 @@
 package dbf
 
 import (
+	"context"
 	"reflect"
 	"testing"
 )
@@ -21,7 +22,7 @@ func TestFMStorage_FindLink(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := tt.f.FindLink(tt.args.link, tt.args.byLink)
+			got, _ := tt.f.FindLink(context.Background(), tt.args.link, tt.args.byLink)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("FMStorage.FindLink() got = %v, want %v", got, tt.want)
 			}

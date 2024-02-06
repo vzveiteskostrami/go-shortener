@@ -2,6 +2,7 @@ package dbf
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"io/fs"
 	"net/http"
@@ -145,7 +146,7 @@ func (f *FMStorage) EndDel() {
 	}
 }
 
-func (f *FMStorage) FindLink(link string, byLink bool) (StorageURL, bool) {
+func (f *FMStorage) FindLink(ctx context.Context, link string, byLink bool) (StorageURL, bool) {
 	if byLink {
 		url, ok := f.store[link]
 		return url, ok

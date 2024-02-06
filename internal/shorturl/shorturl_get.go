@@ -28,7 +28,7 @@ func GetLinkf(w http.ResponseWriter, r *http.Request) {
 	ok := false
 
 	go func() {
-		url, ok = dbf.Store.FindLink(link, true)
+		url, ok = dbf.Store.FindLink(r.Context(), link, true)
 		completed <- struct{}{}
 	}()
 
