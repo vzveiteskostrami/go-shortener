@@ -1,6 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"go/ast"
+
+	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/appends"
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
@@ -49,56 +53,119 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
+	"honnef.co/go/tools/quickfix"
+	"honnef.co/go/tools/simple"
+	"honnef.co/go/tools/staticcheck"
+	"honnef.co/go/tools/stylecheck"
 )
 
 func main() {
-	multichecker.Main(
-		asmdecl.Analyzer,
-		appends.Analyzer,
-		assign.Analyzer,
-		atomic.Analyzer,
-		atomicalign.Analyzer,
-		bools.Analyzer,
-		buildssa.Analyzer,
-		buildtag.Analyzer,
-		cgocall.Analyzer,
-		composite.Analyzer,
-		copylock.Analyzer,
-		ctrlflow.Analyzer,
-		deepequalerrors.Analyzer,
-		defers.Analyzer,
-		directive.Analyzer,
-		errorsas.Analyzer,
-		fieldalignment.Analyzer,
-		findcall.Analyzer,
-		framepointer.Analyzer,
-		httpmux.Analyzer,
-		httpresponse.Analyzer,
-		ifaceassert.Analyzer,
-		inspect.Analyzer,
-		loopclosure.Analyzer,
-		lostcancel.Analyzer,
-		nilfunc.Analyzer,
-		nilness.Analyzer,
-		pkgfact.Analyzer,
-		printf.Analyzer,
-		reflectvaluecompare.Analyzer,
-		shadow.Analyzer,
-		shift.Analyzer,
-		sigchanyzer.Analyzer,
-		slog.Analyzer,
-		sortslice.Analyzer,
-		stdmethods.Analyzer,
-		stringintconv.Analyzer,
-		structtag.Analyzer,
-		testinggoroutine.Analyzer,
-		tests.Analyzer,
-		timeformat.Analyzer,
-		unmarshal.Analyzer,
-		unreachable.Analyzer,
-		unsafeptr.Analyzer,
-		unusedresult.Analyzer,
-		unusedwrite.Analyzer,
-		usesgenerics.Analyzer,
-	)
+
+	var mychecks []*analysis.Analyzer
+
+	for _, v := range staticcheck.Analyzers {
+		mychecks = append(mychecks, v.Analyzer)
+	}
+
+	mychecks = append(mychecks, stylecheck.Analyzers[0].Analyzer)
+	mychecks = append(mychecks, stylecheck.Analyzers[1].Analyzer)
+
+	mychecks = append(mychecks, simple.Analyzers[0].Analyzer)
+	mychecks = append(mychecks, simple.Analyzers[1].Analyzer)
+
+	mychecks = append(mychecks, quickfix.Analyzers[0].Analyzer)
+	mychecks = append(mychecks, quickfix.Analyzers[1].Analyzer)
+
+	mychecks = append(mychecks, asmdecl.Analyzer)
+	mychecks = append(mychecks, appends.Analyzer)
+	mychecks = append(mychecks, assign.Analyzer)
+	mychecks = append(mychecks, atomic.Analyzer)
+	mychecks = append(mychecks, atomicalign.Analyzer)
+	mychecks = append(mychecks, bools.Analyzer)
+	mychecks = append(mychecks, buildssa.Analyzer)
+	mychecks = append(mychecks, buildtag.Analyzer)
+	mychecks = append(mychecks, cgocall.Analyzer)
+	mychecks = append(mychecks, composite.Analyzer)
+	mychecks = append(mychecks, copylock.Analyzer)
+	mychecks = append(mychecks, ctrlflow.Analyzer)
+	mychecks = append(mychecks, deepequalerrors.Analyzer)
+	mychecks = append(mychecks, defers.Analyzer)
+	mychecks = append(mychecks, directive.Analyzer)
+	mychecks = append(mychecks, errorsas.Analyzer)
+	mychecks = append(mychecks, fieldalignment.Analyzer)
+	mychecks = append(mychecks, findcall.Analyzer)
+	mychecks = append(mychecks, framepointer.Analyzer)
+	mychecks = append(mychecks, httpmux.Analyzer)
+	mychecks = append(mychecks, httpresponse.Analyzer)
+	mychecks = append(mychecks, ifaceassert.Analyzer)
+	mychecks = append(mychecks, inspect.Analyzer)
+	mychecks = append(mychecks, loopclosure.Analyzer)
+	mychecks = append(mychecks, lostcancel.Analyzer)
+	mychecks = append(mychecks, nilfunc.Analyzer)
+	mychecks = append(mychecks, nilness.Analyzer)
+	mychecks = append(mychecks, pkgfact.Analyzer)
+	mychecks = append(mychecks, printf.Analyzer)
+	mychecks = append(mychecks, reflectvaluecompare.Analyzer)
+	mychecks = append(mychecks, shadow.Analyzer)
+	mychecks = append(mychecks, shift.Analyzer)
+	mychecks = append(mychecks, sigchanyzer.Analyzer)
+	mychecks = append(mychecks, slog.Analyzer)
+	mychecks = append(mychecks, sortslice.Analyzer)
+	mychecks = append(mychecks, stdmethods.Analyzer)
+	mychecks = append(mychecks, stringintconv.Analyzer)
+	mychecks = append(mychecks, structtag.Analyzer)
+	mychecks = append(mychecks, testinggoroutine.Analyzer)
+	mychecks = append(mychecks, tests.Analyzer)
+	mychecks = append(mychecks, timeformat.Analyzer)
+	mychecks = append(mychecks, unmarshal.Analyzer)
+	mychecks = append(mychecks, unreachable.Analyzer)
+	mychecks = append(mychecks, unsafeptr.Analyzer)
+	mychecks = append(mychecks, unusedresult.Analyzer)
+	mychecks = append(mychecks, unusedwrite.Analyzer)
+	mychecks = append(mychecks, usesgenerics.Analyzer)
+
+	var a1 = &analysis.Analyzer{
+		Name: "checkOsExitInMain",
+		Doc:  "os.Exit presents in package main in func main()",
+		Run:  checkOsExitInMain,
+	}
+	mychecks = append(mychecks, a1)
+
+	multichecker.Main(mychecks...)
+}
+
+func checkOsExitInMain(pass *analysis.Pass) (interface{}, error) {
+	if pass.Pkg.Name() != "main" {
+		return nil, nil
+	}
+	currentFuncName := ""
+
+	isOsExitInsideMain := func(x *ast.ExprStmt) {
+		if call, ok := x.X.(*ast.CallExpr); ok {
+			s := fmt.Sprint(call.Fun)
+			if s == "&{os Exit}" {
+				pass.Reportf(x.Pos(), "os.Exit in main() function")
+			}
+		}
+	}
+
+	fude := func(x *ast.FuncDecl) {
+		currentFuncName = x.Name.Name
+	}
+
+	for _, file := range pass.Files {
+		// функцией ast.Inspect проходим по всем узлам AST
+		ast.Inspect(file, func(node ast.Node) bool {
+			switch x := node.(type) {
+			case *ast.ExprStmt: // выражение
+				if currentFuncName == "main" {
+					isOsExitInsideMain(x)
+				}
+			case *ast.FuncDecl: // декларация ф-ции
+				fude(x)
+			}
+			return true
+		})
+	}
+	return nil, nil
 }
