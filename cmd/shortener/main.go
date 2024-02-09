@@ -69,6 +69,7 @@ func main() {
 	logging.S().Fatal(srv.ListenAndServe())
 }
 
+// Сборка главного роутера
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
 
