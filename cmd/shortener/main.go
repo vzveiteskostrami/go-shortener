@@ -8,6 +8,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,10 +26,26 @@ import (
 )
 
 var (
-	srv *http.Server
+	srv          *http.Server
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 )
 
 func main() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build date:", buildCommit)
+
 	logging.LoggingInit()
 	defer logging.LoggingSync()
 	config.ReadData()
