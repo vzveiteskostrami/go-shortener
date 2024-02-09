@@ -1,6 +1,14 @@
+// Сервер сокращения URL. Принимает полный URL на входе, возвращает сокращённый.
+// При обращении по сокращённому URL делает переадресацию на полный URL. Ведение
+// базы данных URL. Поддерживается владелец и действия по вводу новых URL и удаление
+// ненужных.
+// Запуск в командной строке:
+//
+//	shortener [-a=<[in host]:<in port>>] [-b=<[out host]:<out port>>] [-f=<Storage text file name>] [-d=<Database connect string>]
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,10 +26,26 @@ import (
 )
 
 var (
-	srv *http.Server
+	srv          *http.Server
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 )
 
 func main() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build date:", buildCommit)
+
 	logging.LoggingInit()
 	defer logging.LoggingSync()
 	config.ReadData()
@@ -45,6 +69,7 @@ func main() {
 	logging.S().Fatal(srv.ListenAndServe())
 }
 
+// Сборка главного роутера
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
 
