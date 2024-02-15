@@ -1,6 +1,14 @@
+// Сервер сокращения URL. Принимает полный URL на входе, возвращает сокращённый.
+// При обращении по сокращённому URL делает переадресацию на полный URL. Ведение
+// базы данных URL. Поддерживается владелец и действия по вводу новых URL и удаление
+// ненужных.
+// Запуск в командной строке:
+//
+//	shortener [-a=<[in host]:<in port>>] [-b=<[out host]:<out port>>] [-f=<Storage text file name>] [-d=<Database connect string>]
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,6 +19,7 @@ import (
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/go-chi/chi/v5"
 
@@ -18,10 +27,26 @@ import (
 )
 
 var (
-	srv *http.Server
+	srv          *http.Server
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 )
 
 func main() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
+
 	logging.LoggingInit()
 	defer logging.LoggingSync()
 	config.ReadData()
@@ -42,9 +67,23 @@ func main() {
 		"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
 	)
 
-	logging.S().Fatal(srv.ListenAndServe())
+	if config.UseHTTPS {
+		manager := &autocert.Manager{
+			// директория для хранения сертификатов
+			Cache: autocert.DirCache("cache-dir"),
+			// функция, принимающая Terms of Service издателя сертификатов
+			Prompt: autocert.AcceptTOS,
+			// перечень доменов, для которых будут поддерживаться сертификаты
+			HostPolicy: autocert.HostWhitelist(config.Addresses.In.Host, "127.0.0.1", "localhost"),
+		}
+		srv.TLSConfig = manager.TLSConfig()
+		logging.S().Fatal(srv.ListenAndServeTLS("", ""))
+	} else {
+		logging.S().Fatal(srv.ListenAndServe())
+	}
 }
 
+// Сборка главного роутера
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
 
