@@ -12,6 +12,7 @@ import (
 var (
 	Addresses InOutAddresses
 	Storage   StorageAttr
+	UseHTTPS  bool
 )
 
 type NetAddress struct {
@@ -79,11 +80,13 @@ func ReadData() {
 	flag.Var(Addresses.Out, "b", "Out net address host:port")
 	fn := flag.String("f", "/tmp/short-url-db.json", "Storage text file name")
 	dbc := flag.String("d", "", "Database connect string")
+	uh := flag.Bool("s", false, "HTTPS connect enabled")
 
 	flag.Parse()
 
 	Storage.FileName = *fn
 	Storage.DBConnect = *dbc
+	UseHTTPS = *uh
 
 	var err error
 	err = setServerAddress()
@@ -99,6 +102,10 @@ func ReadData() {
 		fmt.Println(err)
 	}
 	err = setDatabaseDSN()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = setEnableHttps()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -140,6 +147,13 @@ func setFileStoragePath() (err error) {
 func setDatabaseDSN() (err error) {
 	if s, ok := os.LookupEnv("DATABASE_DSN"); ok && s != "" {
 		Storage.DBConnect = s
+	}
+	return
+}
+
+func setEnableHttps() (err error) {
+	if _, ok := os.LookupEnv("ENABLE_HTTPS"); ok {
+		UseHTTPS = ok
 	}
 	return
 }

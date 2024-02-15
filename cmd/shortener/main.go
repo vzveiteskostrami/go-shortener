@@ -19,6 +19,7 @@ import (
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/go-chi/chi/v5"
 
@@ -44,7 +45,7 @@ func main() {
 	}
 	fmt.Println("Build version:", buildVersion)
 	fmt.Println("Build date:", buildDate)
-	fmt.Println("Build date:", buildCommit)
+	fmt.Println("Build commit:", buildCommit)
 
 	logging.LoggingInit()
 	defer logging.LoggingSync()
@@ -66,7 +67,20 @@ func main() {
 		"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
 	)
 
-	logging.S().Fatal(srv.ListenAndServe())
+	if config.UseHTTPS {
+		manager := &autocert.Manager{
+			// директория для хранения сертификатов
+			Cache: autocert.DirCache("cache-dir"),
+			// функция, принимающая Terms of Service издателя сертификатов
+			Prompt: autocert.AcceptTOS,
+			// перечень доменов, для которых будут поддерживаться сертификаты
+			HostPolicy: autocert.HostWhitelist(config.Addresses.In.Host, "127.0.0.1", "localhost"),
+		}
+		srv.TLSConfig = manager.TLSConfig()
+		logging.S().Fatal(srv.ListenAndServeTLS("", ""))
+	} else {
+		logging.S().Fatal(srv.ListenAndServe())
+	}
 }
 
 // Сборка главного роутера
