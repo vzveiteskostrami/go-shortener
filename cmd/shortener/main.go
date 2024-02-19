@@ -62,12 +62,11 @@ func main() {
 		IdleTimeout: time.Second * 1,
 	}
 
-	logging.S().Infow(
-		"Starting server",
-		"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
-	)
-
 	if config.UseHTTPS {
+		logging.S().Infow(
+			"Starting server with SSL/TLS",
+			"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
+		)
 		manager := &autocert.Manager{
 			// директория для хранения сертификатов
 			Cache: autocert.DirCache("cache-dir"),
@@ -79,6 +78,10 @@ func main() {
 		srv.TLSConfig = manager.TLSConfig()
 		logging.S().Fatal(srv.ListenAndServeTLS("", ""))
 	} else {
+		logging.S().Infow(
+			"Starting server",
+			"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
+		)
 		logging.S().Fatal(srv.ListenAndServe())
 	}
 }
