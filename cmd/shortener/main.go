@@ -8,9 +8,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
@@ -48,12 +52,10 @@ func main() {
 	fmt.Println("Build commit:", buildCommit)
 
 	logging.LoggingInit()
-	defer logging.LoggingSync()
 	config.ReadData()
 	dbf.MakeStorage()
 	shorturl.SetURLNum(dbf.Store.DBFInit())
 	defer dbf.Store.DBFClose()
-	//shorturl.GoDel()
 	go shorturl.DoDel()
 
 	srv = &http.Server{
@@ -61,6 +63,19 @@ func main() {
 		Handler:     mainRouter(),
 		IdleTimeout: time.Second * 1,
 	}
+
+	//idleConnsClosed := make(chan struct{})
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
+	go func() {
+		<-sigs
+		if err := srv.Shutdown(context.Background()); err != nil {
+			logging.S().Errorln("Server shutdown error", err)
+		} else {
+			logging.S().Infoln("Server has been closed succesfully")
+		}
+		//close(idleConnsClosed)
+	}()
 
 	if config.UseHTTPS {
 		logging.S().Infow(
@@ -76,17 +91,22 @@ func main() {
 			HostPolicy: autocert.HostWhitelist(config.Addresses.In.Host, "127.0.0.1", "localhost"),
 		}
 		srv.TLSConfig = manager.TLSConfig()
-		logging.S().Fatal(srv.ListenAndServeTLS("", ""))
+		if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
+			logging.S().Fatal(err)
+		}
 	} else {
 		logging.S().Infow(
 			"Starting server",
 			"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
 		)
-		logging.S().Fatal(srv.ListenAndServe())
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			logging.S().Fatal(err)
+		}
 	}
+	//<-idleConnsClosed
+	logging.S().Infoln("Major thread go home")
 }
 
-// Сборка главного роутера
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
 

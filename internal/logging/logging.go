@@ -36,10 +36,6 @@ func LoggingInit() {
 	sugar = *logger.Sugar()
 }
 
-func LoggingSync() {
-	logger.Sync()
-}
-
 type (
 	// берём структуру для хранения сведений об ответе
 	responseData struct {
