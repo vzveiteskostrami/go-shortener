@@ -235,7 +235,7 @@ func ReadData() {
 	// Необходимо для быстрого перехода тестирования работы приложения с
 	// Postgres.
 	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=videos password=masterkey dbname=videos sslmode=disable"
-	Storage.DBConnect = "host=127.0.0.1 port=5432 user=executor password=executor dbname=gophermart sslmode=disable"
+	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=executor password=executor dbname=gophermart sslmode=disable"
 	//Storage.FileName = ""
 }
 
