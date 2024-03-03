@@ -18,6 +18,7 @@ type PConfig struct {
 	FileStoragePath *string `json:"file_storage_path,omitempty"`
 	EnableHttps     *bool   `json:"enable_https,omitempty"`
 	DatabaseDSN     *string `json:"database_dsn,omitempty"`
+	TrustedSubnet   *string `json:"trusted_subnet,omitempty"`
 }
 
 var (
@@ -42,8 +43,9 @@ func (na *NetAddress) Set(flagValue string) error {
 }
 
 type StorageAttr struct {
-	FileName  string
-	DBConnect string
+	FileName      string
+	DBConnect     string
+	TrustedSubnet string
 }
 
 func getAddrAndPort(s string) (string, int, error) {
@@ -96,6 +98,7 @@ func ReadData() {
 	fn := flag.String("f", "", "Storage text file name")
 	dbc := flag.String("d", "", "Database connect string")
 	uh := flag.Bool("s", false, "HTTPS connect enabled")
+	trustedSubnet := flag.String("t", "", "Trusted subnet")
 	cfgFileName := flag.String("c", "", "Config file name")
 	cfgFileName1 := flag.String("config", "", "Config file name")
 
@@ -193,6 +196,17 @@ func ReadData() {
 		fmt.Println(err)
 	}
 
+	// Разбираемся с "Trusted subnet"
+	if *trustedSubnet != "" {
+		Storage.TrustedSubnet = *trustedSubnet
+	} else if cfg.TrustedSubnet != nil && *cfg.TrustedSubnet != "" {
+		Storage.TrustedSubnet = *cfg.TrustedSubnet
+	}
+	err = setTrustedSubnet()
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	// Узнаём в принципе был флаг -s или нет. Необходимо для приоритетности
 	// установки значений. Если его не было, значит нужно читать значение из
 	// конфига в json. Если был, значение в json конфиге не имеет значения.
@@ -221,7 +235,7 @@ func ReadData() {
 	// Необходимо для быстрого перехода тестирования работы приложения с
 	// Postgres.
 	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=videos password=masterkey dbname=videos sslmode=disable"
-	//Storage.DBConnect = "host=127.0.0.1 port=5432 user=executor password=executor dbname=gophermart sslmode=disable"
+	Storage.DBConnect = "host=127.0.0.1 port=5432 user=executor password=executor dbname=gophermart sslmode=disable"
 	//Storage.FileName = ""
 }
 
@@ -255,6 +269,13 @@ func setFileStoragePath() (err error) {
 func setDatabaseDSN() (err error) {
 	if s, ok := os.LookupEnv("DATABASE_DSN"); ok && s != "" {
 		Storage.DBConnect = s
+	}
+	return
+}
+
+func setTrustedSubnet() (err error) {
+	if s, ok := os.LookupEnv("TRUSTED_SUBNET"); ok && s != "" {
+		Storage.TrustedSubnet = s
 	}
 	return
 }

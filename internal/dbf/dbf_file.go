@@ -192,3 +192,7 @@ func (f *FMStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]Storage
 	}
 	return items, nil
 }
+
+func (f *FMStorage) GetStats(ctx context.Context) (StatisticsURL, error) {
+	return StatisticsURL{0, 0}, nil
+}

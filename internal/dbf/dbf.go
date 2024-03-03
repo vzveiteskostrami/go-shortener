@@ -27,6 +27,7 @@ type GSStorage interface {
 	PingDBf(w http.ResponseWriter, r *http.Request)
 	FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error)
 	DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error)
+	GetStats(ctx context.Context) (StatisticsURL, error)
 
 	AddToDel(surl string)
 	BeginDel()
@@ -40,6 +41,11 @@ type StorageURL struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 	Deleted     bool   `json:"deleted"`
+}
+
+type StatisticsURL struct {
+	URLs  int64 `json:"urls"`
+	Users int64 `json:"users"`
 }
 
 /*

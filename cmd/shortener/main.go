@@ -23,6 +23,7 @@ import (
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
+	trust "github.com/vzveiteskostrami/go-shortener/internal/trusted"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/go-chi/chi/v5"
@@ -109,6 +110,14 @@ func main() {
 
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
+
+	r.Route("/api/internal", func(r chi.Router) {
+		r.Use(compressing.GZIPHandle)
+		r.Use(logging.WithLogging)
+		r.Use(trust.TrustedHandle)
+		r.Use(auth.AuthHandle)
+		r.Get("/stats", shorturl.GetStatsf)
+	})
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(compressing.GZIPHandle)
