@@ -3,10 +3,8 @@ package shorturl
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
@@ -19,7 +17,7 @@ func SetLink() http.Handler {
 
 func SetLinkf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	fmt.Fprintln(os.Stdout, "**************", "SetLinkf")
+	//fmt.Fprintln(os.Stdout, "**************", "SetLinkf")
 	w.Header().Set("Content-Type", "text/plain")
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -75,7 +73,7 @@ func SetJSONLink() http.Handler {
 
 func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONLinkf")
+	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONLinkf")
 	w.Header().Set("Content-Type", "application/json")
 	var url inURL
 	if err := json.NewDecoder(r.Body).Decode(&url); err != nil {
@@ -122,7 +120,7 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 
 func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
-	fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONBatchLinkf")
+	//fmt.Fprintln(os.Stdout, "^^^^^^^^^^^^^^", "SetJSONBatchLinkf")
 	w.Header().Set("Content-Type", "application/json")
 	var urls []cmnURL
 	if err := json.NewDecoder(r.Body).Decode(&urls); err != nil {

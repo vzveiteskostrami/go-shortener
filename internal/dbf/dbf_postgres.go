@@ -124,3 +124,30 @@ func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (Sto
 
 	return storageURLItem, err
 }
+
+func (d *PGStorage) GetStats(ctx context.Context) (StatisticsURL, error) {
+	rows, err := d.db.QueryContext(ctx, "SELECT count(distinct OWNERID), count(SHORTURL) from urlstore WHERE not deleteflag;")
+	if err != nil {
+		logging.S().Error(err)
+		return StatisticsURL{}, err
+	}
+	if rows.Err() != nil {
+		err = rows.Err()
+		logging.S().Error(err)
+		return StatisticsURL{}, err
+	}
+	defer rows.Close()
+
+	statisticsURL := StatisticsURL{}
+	ok := false
+	for !ok && rows.Next() {
+		err = rows.Scan(&statisticsURL.Users, &statisticsURL.URLs)
+		if err != nil {
+			logging.S().Error(err)
+			return StatisticsURL{}, err
+		}
+		ok = true
+	}
+
+	return statisticsURL, nil
+}

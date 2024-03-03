@@ -1,8 +1,20 @@
+// Сервер сокращения URL. Принимает полный URL на входе, возвращает сокращённый.
+// При обращении по сокращённому URL делает переадресацию на полный URL. Ведение
+// базы данных URL. Поддерживается владелец и действия по вводу новых URL и удаление
+// ненужных.
+// Запуск в командной строке:
+//
+//	shortener [-a=<[in host]:<in port>>] [-b=<[out host]:<out port>>] [-f=<Storage text file name>] [-d=<Database connect string>]
 package main
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
@@ -11,6 +23,8 @@ import (
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
+	trust "github.com/vzveiteskostrami/go-shortener/internal/trusted"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/go-chi/chi/v5"
 
@@ -18,17 +32,31 @@ import (
 )
 
 var (
-	srv *http.Server
+	srv          *http.Server
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 )
 
 func main() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
+
 	logging.LoggingInit()
-	defer logging.LoggingSync()
 	config.ReadData()
 	dbf.MakeStorage()
 	shorturl.SetURLNum(dbf.Store.DBFInit())
 	defer dbf.Store.DBFClose()
-	//shorturl.GoDel()
 	go shorturl.DoDel()
 
 	srv = &http.Server{
@@ -37,16 +65,59 @@ func main() {
 		IdleTimeout: time.Second * 1,
 	}
 
-	logging.S().Infow(
-		"Starting server",
-		"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
-	)
+	//idleConnsClosed := make(chan struct{})
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
+	go func() {
+		<-sigs
+		if err := srv.Shutdown(context.Background()); err != nil {
+			logging.S().Errorln("Server shutdown error", err)
+		} else {
+			logging.S().Infoln("Server has been closed succesfully")
+		}
+		//close(idleConnsClosed)
+	}()
 
-	logging.S().Fatal(srv.ListenAndServe())
+	if config.UseHTTPS {
+		logging.S().Infow(
+			"Starting server with SSL/TLS",
+			"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
+		)
+		manager := &autocert.Manager{
+			// директория для хранения сертификатов
+			Cache: autocert.DirCache("cache-dir"),
+			// функция, принимающая Terms of Service издателя сертификатов
+			Prompt: autocert.AcceptTOS,
+			// перечень доменов, для которых будут поддерживаться сертификаты
+			HostPolicy: autocert.HostWhitelist(config.Addresses.In.Host, "127.0.0.1", "localhost"),
+		}
+		srv.TLSConfig = manager.TLSConfig()
+		if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
+			logging.S().Fatal(err)
+		}
+	} else {
+		logging.S().Infow(
+			"Starting server",
+			"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
+		)
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			logging.S().Fatal(err)
+		}
+	}
+	//<-idleConnsClosed
+	logging.S().Infoln("Major thread go home")
 }
 
 func mainRouter() chi.Router {
 	r := chi.NewRouter()
+
+	r.Route("/api/internal", func(r chi.Router) {
+		r.Use(compressing.GZIPHandle)
+		r.Use(logging.WithLogging)
+		r.Use(trust.TrustedHandle)
+		r.Use(auth.AuthHandle)
+		r.Get("/stats", shorturl.GetStatsf)
+	})
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(compressing.GZIPHandle)

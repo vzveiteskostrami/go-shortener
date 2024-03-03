@@ -173,6 +173,7 @@ func (f *FMStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 func (f *FMStorage) PrintDBF() {
 }
 
+// DBFGetOwnURLs и тут что-то надо написать иначе статик чек задалбывает
 // [LINT] здесь можно подумать как по другому хранить данные, чтобы поиск был не О(n), а O(1).
 // Можно попробовать использовать map[int64][]StorageUrl. Где int64 - ownerID
 // [OBJECTION] Да, именно здесь поиск убыстрится. Но везде, где идёт прямой поиск URL он
@@ -190,4 +191,8 @@ func (f *FMStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]Storage
 		}
 	}
 	return items, nil
+}
+
+func (f *FMStorage) GetStats(ctx context.Context) (StatisticsURL, error) {
+	return StatisticsURL{0, 0}, nil
 }
