@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -19,12 +20,14 @@ type PConfig struct {
 	EnableHttps     *bool   `json:"enable_https,omitempty"`
 	DatabaseDSN     *string `json:"database_dsn,omitempty"`
 	TrustedSubnet   *string `json:"trusted_subnet,omitempty"`
+	EnablegRPC      *bool   `json:"enable_grpc,omitempty"`
 }
 
 var (
 	Addresses InOutAddresses
 	Storage   StorageAttr
 	UseHTTPS  bool
+	UsegRPC   bool
 )
 
 type NetAddress struct {
@@ -46,6 +49,7 @@ type StorageAttr struct {
 	FileName      string
 	DBConnect     string
 	TrustedSubnet string
+	TrustedIPNet  *net.IPNet
 }
 
 func getAddrAndPort(s string) (string, int, error) {
@@ -101,6 +105,7 @@ func ReadData() {
 	trustedSubnet := flag.String("t", "", "Trusted subnet")
 	cfgFileName := flag.String("c", "", "Config file name")
 	cfgFileName1 := flag.String("config", "", "Config file name")
+	gRPC := flag.Bool("gRPC", false, "gRPC connect enabled (-s doesn't work in this case)")
 
 	flag.Parse()
 
@@ -207,18 +212,27 @@ func ReadData() {
 		fmt.Println(err)
 	}
 
-	// Узнаём в принципе был флаг -s или нет. Необходимо для приоритетности
-	// установки значений. Если его не было, значит нужно читать значение из
-	// конфига в json. Если был, значение в json конфиге не имеет значения.
-	hasUseHTTPSArg := false
-	for _, s := range os.Args {
-		if s == "-s" || strings.HasPrefix(s, "-s=") {
-			hasUseHTTPSArg = true
-			break
+	if Storage.TrustedSubnet != "" {
+		_, Storage.TrustedIPNet, err = net.ParseCIDR(Storage.TrustedSubnet)
+		if err != nil {
+			panic("Это что такое? " + Storage.TrustedSubnet)
 		}
 	}
 
-	// Разбираемся с "Config file name"
+	// Узнаём в принципе были ли флаги -s и -gRPC или нет. Необходимо для приоритетности
+	// установки значений. Если их не было, значит нужно читать значение из
+	// конфига в json. Если был, значение в json конфиге не имеет значения.
+	hasUseHTTPSArg := false
+	hasUsegRPCArg := false
+	for _, s := range os.Args {
+		if s == "-s" || strings.HasPrefix(s, "-s=") {
+			hasUseHTTPSArg = true
+		} else if s == "-gRPC" || strings.HasPrefix(s, "-gRPC=") {
+			hasUsegRPCArg = true
+		}
+	}
+
+	// Разбираемся с "Enable https"
 	if hasUseHTTPSArg {
 		UseHTTPS = *uh
 	} else {
@@ -227,6 +241,19 @@ func ReadData() {
 		}
 	}
 	err = setEnableHttps()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Разбираемся с "Enable gRPC"
+	if hasUsegRPCArg {
+		UsegRPC = *gRPC
+	} else {
+		if cfg.EnablegRPC != nil {
+			UsegRPC = *cfg.EnablegRPC
+		}
+	}
+	err = setEnablegRPC()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -283,6 +310,13 @@ func setTrustedSubnet() (err error) {
 func setEnableHttps() (err error) {
 	if _, ok := os.LookupEnv("ENABLE_HTTPS"); ok {
 		UseHTTPS = ok
+	}
+	return
+}
+
+func setEnablegRPC() (err error) {
+	if _, ok := os.LookupEnv("ENABLE_GRPC"); ok {
+		UsegRPC = ok
 	}
 	return
 }
