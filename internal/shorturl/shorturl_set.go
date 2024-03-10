@@ -9,6 +9,7 @@ import (
 
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
+	"github.com/vzveiteskostrami/go-shortener/internal/urlman"
 )
 
 func SetLink() http.Handler {
@@ -41,9 +42,8 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 	// На возражение, что это надо делать в базе, так как там могут несколько пользователей
 	// наращивать счётчик в параллель, есть контрвозражение, что в ТЗ упоминается о монопольной
 	// работе сервиса, и поэтому выбрана "надбазная" реализация наращивания счётчика.
-	lockCounter.Lock()
-	defer lockCounter.Unlock()
-	nextNum := currURLNum
+	nextNum := urlman.HoldNumber()
+	defer urlman.UnlockNumbers()
 
 	ownerID := r.Context().Value(auth.CPownerID)
 
@@ -57,11 +57,11 @@ func SetLinkf(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if su.UUID == nextNum {
 			w.WriteHeader(http.StatusCreated)
-			currURLNum++
+			urlman.NumberUsed()
 		} else {
 			w.WriteHeader(http.StatusConflict)
 		}
-		w.Write([]byte(makeURL(su.UUID)))
+		w.Write([]byte(urlman.MakeURL(su.UUID)))
 	}
 	// сохранён/закомментирован вывод на экран. Необходим для сложных случаев тестирования.
 	//fmt.Fprintln(os.Stdout, "Записан URL", url, "как", su.ShortURL)
@@ -93,9 +93,8 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 	// DBFSaveLink. А во-вторых, мьютекс здесь вообще бы был лишним (или правильнее, не отпирался бы по defer),
 	// если бы счётчик URL наращивался бы здесь гарантировано. Но это один из вариантов.
 	// Поэтому требует синхронизации. Или переделки способа получения нового URL.
-	lockWrite.Lock()
-	defer lockWrite.Unlock()
-	nextNum := currURLNum
+	nextNum := urlman.HoldNumber()
+	defer urlman.UnlockNumbers()
 
 	ownerID := r.Context().Value(auth.CPownerID)
 
@@ -106,12 +105,12 @@ func SetJSONLinkf(w http.ResponseWriter, r *http.Request) {
 	dbf.Store.DBFSaveLink(&su)
 	if su.UUID == nextNum {
 		w.WriteHeader(http.StatusCreated)
-		currURLNum++
+		urlman.NumberUsed()
 	} else {
 		w.WriteHeader(http.StatusConflict)
 	}
 	var buf bytes.Buffer
-	surl.Result = makeURL(su.UUID)
+	surl.Result = urlman.MakeURL(su.UUID)
 
 	jsonEncoder := json.NewEncoder(&buf)
 	jsonEncoder.Encode(surl)
@@ -134,23 +133,23 @@ func SetJSONBatchLinkf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var surls []cmnURL
-	lockWrite.Lock()
-	defer lockWrite.Unlock()
+	num := urlman.HoldNumber()
+	defer urlman.UnlockNumbers()
 
 	ownerID := r.Context().Value(auth.CPownerID)
 
 	for _, url := range urls {
 		if *url.OriginalURL != "" {
-			shorturl := makeURL(currURLNum)
+			shorturl := urlman.MakeURL(num)
 			surl := cmnURL{CorrelationID: url.CorrelationID, ShortURL: &shorturl}
 			surls = append(surls, surl)
-			su := dbf.StorageURL{UUID: currURLNum,
+			su := dbf.StorageURL{UUID: num,
 				OriginalURL: *url.OriginalURL,
 				OWNERID:     ownerID.(int64),
-				ShortURL:    strconv.FormatInt(currURLNum, 36)}
+				ShortURL:    strconv.FormatInt(num, 36)}
 			dbf.Store.DBFSaveLink(&su)
-			if su.UUID == currURLNum {
-				currURLNum++
+			if su.UUID == num {
+				num = urlman.NumberUsed()
 			}
 		}
 	}

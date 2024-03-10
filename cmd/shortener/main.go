@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"strconv"
@@ -24,11 +25,12 @@ import (
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 	"github.com/vzveiteskostrami/go-shortener/internal/shorturl"
 	trust "github.com/vzveiteskostrami/go-shortener/internal/trusted"
+	"github.com/vzveiteskostrami/go-shortener/internal/urlman"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/go-chi/chi/v5"
 
-	"net/http/pprof"
+	"github.com/vzveiteskostrami/go-shortener/internal/lgrpc"
 )
 
 var (
@@ -55,57 +57,15 @@ func main() {
 	logging.LoggingInit()
 	config.ReadData()
 	dbf.MakeStorage()
-	shorturl.SetURLNum(dbf.Store.DBFInit())
+	urlman.SetURLNum(dbf.Store.DBFInit())
 	defer dbf.Store.DBFClose()
 	go shorturl.DoDel()
 
-	srv = &http.Server{
-		Addr:        config.Addresses.In.Host + ":" + strconv.Itoa(config.Addresses.In.Port),
-		Handler:     mainRouter(),
-		IdleTimeout: time.Second * 1,
-	}
-
-	//idleConnsClosed := make(chan struct{})
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
-	go func() {
-		<-sigs
-		if err := srv.Shutdown(context.Background()); err != nil {
-			logging.S().Errorln("Server shutdown error", err)
-		} else {
-			logging.S().Infoln("Server has been closed succesfully")
-		}
-		//close(idleConnsClosed)
-	}()
-
-	if config.UseHTTPS {
-		logging.S().Infow(
-			"Starting server with SSL/TLS",
-			"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
-		)
-		manager := &autocert.Manager{
-			// директория для хранения сертификатов
-			Cache: autocert.DirCache("cache-dir"),
-			// функция, принимающая Terms of Service издателя сертификатов
-			Prompt: autocert.AcceptTOS,
-			// перечень доменов, для которых будут поддерживаться сертификаты
-			HostPolicy: autocert.HostWhitelist(config.Addresses.In.Host, "127.0.0.1", "localhost"),
-		}
-		srv.TLSConfig = manager.TLSConfig()
-		if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
-			logging.S().Fatal(err)
-		}
+	if config.UsegRPC {
+		lgrpc.DogRPC()
 	} else {
-		logging.S().Infow(
-			"Starting server",
-			"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
-		)
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			logging.S().Fatal(err)
-		}
+		doHTTP()
 	}
-	//<-idleConnsClosed
-	logging.S().Infoln("Major thread go home")
 }
 
 func mainRouter() chi.Router {
@@ -165,4 +125,54 @@ func addPprof(r *chi.Mux) {
 	r.Handle("/pprof/heap", pprof.Handler("heap"))
 	r.Handle("/pprof/block", pprof.Handler("block"))
 	r.Handle("/pprof/allocs", pprof.Handler("allocs"))
+}
+
+func doHTTP() {
+	srv = &http.Server{
+		Addr:        config.Addresses.In.Host + ":" + strconv.Itoa(config.Addresses.In.Port),
+		Handler:     mainRouter(),
+		IdleTimeout: time.Second * 1,
+	}
+
+	//idleConnsClosed := make(chan struct{})
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
+	go func() {
+		<-sigs
+		if err := srv.Shutdown(context.Background()); err != nil {
+			logging.S().Errorln("Server shutdown error", err)
+		} else {
+			logging.S().Infoln("Server has been closed succesfully")
+		}
+		//close(idleConnsClosed)
+	}()
+
+	if config.UseHTTPS {
+		logging.S().Infow(
+			"Starting server with SSL/TLS",
+			"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
+		)
+		manager := &autocert.Manager{
+			// директория для хранения сертификатов
+			Cache: autocert.DirCache("cache-dir"),
+			// функция, принимающая Terms of Service издателя сертификатов
+			Prompt: autocert.AcceptTOS,
+			// перечень доменов, для которых будут поддерживаться сертификаты
+			HostPolicy: autocert.HostWhitelist(config.Addresses.In.Host, "127.0.0.1", "localhost"),
+		}
+		srv.TLSConfig = manager.TLSConfig()
+		if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
+			logging.S().Fatal(err)
+		}
+	} else {
+		logging.S().Infow(
+			"Starting server",
+			"addr", config.Addresses.In.Host+":"+strconv.Itoa(config.Addresses.In.Port),
+		)
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			logging.S().Fatal(err)
+		}
+	}
+	//<-idleConnsClosed
+	logging.S().Infoln("Major thread go home")
 }

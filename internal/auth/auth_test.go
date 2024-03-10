@@ -15,12 +15,12 @@ func Test_getOwnerID(t *testing.T) {
 		{"Wrong", "aaaaaaaaaaaaaaaaaaaaaaa", false},
 		{"Right", "aaaaaaaaaaaaaaaaaaaaaaa", true},
 	}
-	tests[1].tokenString, _, _ = tokenService.makeToken()
+	tests[1].tokenString, _, _ = TokenService.MakeToken()
 	logging.LoggingInit()
-	tokenService.NewOWNERID = 0
+	TokenService.NewOWNERID = 0
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, got1 := getOwnerID(tt.tokenString)
+			_, got1 := GetOwnerID(tt.tokenString)
 			if ((got1 != nil) && tt.want1) || ((got1 == nil) && !tt.want1) {
 				t.Errorf("getOwnerID() got1 = %v, want %v", got1, tt.want1)
 			}

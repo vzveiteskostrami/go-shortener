@@ -1,12 +1,5 @@
 package shorturl
 
-import (
-	"strconv"
-	"sync"
-
-	"github.com/vzveiteskostrami/go-shortener/internal/config"
-)
-
 type inURL struct {
 	URL string `json:"url"`
 }
@@ -22,6 +15,7 @@ type cmnURL struct {
 	Deleted       *bool   `json:"deleted,omitempty"`
 }
 
+/*
 var (
 	currURLNum  int64 = 0
 	lockCounter sync.Mutex
@@ -38,3 +32,4 @@ func makeURL(num int64) string {
 	}
 	return config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + strconv.FormatInt(num, 36)
 }
+*/
