@@ -31,7 +31,7 @@ type tokenServiceStruct struct {
 var (
 	CPownerID    ContextParamName = "OwnerID"
 	CPownerValid ContextParamName = "OwnerValid"
-	tokenService tokenServiceStruct
+	TokenService tokenServiceStruct
 )
 
 func AuthHandle(next http.Handler) http.Handler {
@@ -45,10 +45,10 @@ func AuthHandle(next http.Handler) http.Handler {
 
 		if err != nil {
 			ownerValid = false
-			token, ownerID, err = tokenService.makeToken()
-		} else if ownerID, err = getOwnerID(cu.Value); err != nil {
+			token, ownerID, err = TokenService.MakeToken()
+		} else if ownerID, err = GetOwnerID(cu.Value); err != nil {
 			ownerValid = false
-			token, ownerID, err = tokenService.makeToken()
+			token, ownerID, err = TokenService.MakeToken()
 		}
 
 		if err != nil {
@@ -66,7 +66,7 @@ func AuthHandle(next http.Handler) http.Handler {
 	})
 }
 
-func getOwnerID(tokenString string) (int64, error) {
+func GetOwnerID(tokenString string) (int64, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -90,7 +90,7 @@ func getOwnerID(tokenString string) (int64, error) {
 	return claims.OwnerID, nil
 }
 
-func (t *tokenServiceStruct) makeToken() (string, int64, error) {
+func (t *tokenServiceStruct) MakeToken() (string, int64, error) {
 	t.locker.Lock()
 	defer t.locker.Unlock()
 	n := t.NewOWNERID
@@ -108,9 +108,9 @@ func (t *tokenServiceStruct) makeToken() (string, int64, error) {
 }
 
 func SetNewOwnerID(n int64) {
-	tokenService.NewOWNERID = n
+	TokenService.NewOWNERID = n
 }
 
 func init() {
-	tokenService.NewOWNERID = 0
+	TokenService.NewOWNERID = 0
 }

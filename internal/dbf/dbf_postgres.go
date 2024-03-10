@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"sync"
 
 	_ "github.com/lib/pq"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
@@ -22,6 +23,8 @@ type PGStorage struct {
 	//
 	delSQLParams []interface{}
 }
+
+var lockWrite sync.Mutex
 
 func (d *PGStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error) {
 	rows, err := d.db.QueryContext(ctx, "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
@@ -53,7 +56,7 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 	//[OBJECTION] Здесь происходит сохранение данных, а не получение.
 	// Если при получении данных пользователь отвалился, то нам да, незачем продолжать
 	// работу. Она никому не нужна. Если он отвалился во время записи данных, нас
-	// это мало волнует. У нас есь всё, чтобы сохранить данные, и в отсутствии пользователя.
+	// это мало волнует. У нас есть всё, чтобы сохранить данные, и в отсутствии пользователя.
 	su, err := d.FindLink(context.Background(), storageURLItem.OriginalURL, false)
 	if err == nil {
 		storageURLItem.UUID = su.UUID
@@ -61,8 +64,8 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 		storageURLItem.ShortURL = su.ShortURL
 		storageURLItem.Deleted = su.Deleted
 	} else {
-		//lockWrite.Lock()
-		//defer lockWrite.Unlock()
+		lockWrite.Lock()
+		defer lockWrite.Unlock()
 		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG) VALUES ($1,$2,$3,$4,$5);",
 			storageURLItem.OWNERID,
 			storageURLItem.UUID,
@@ -123,4 +126,31 @@ func (d *PGStorage) FindLink(ctx context.Context, link string, byLink bool) (Sto
 	}
 
 	return storageURLItem, err
+}
+
+func (d *PGStorage) GetStats(ctx context.Context) (StatisticsURL, error) {
+	rows, err := d.db.QueryContext(ctx, "SELECT count(distinct OWNERID), count(SHORTURL) from urlstore WHERE not deleteflag;")
+	if err != nil {
+		logging.S().Error(err)
+		return StatisticsURL{}, err
+	}
+	if rows.Err() != nil {
+		err = rows.Err()
+		logging.S().Error(err)
+		return StatisticsURL{}, err
+	}
+	defer rows.Close()
+
+	statisticsURL := StatisticsURL{}
+	ok := false
+	for !ok && rows.Next() {
+		err = rows.Scan(&statisticsURL.Users, &statisticsURL.URLs)
+		if err != nil {
+			logging.S().Error(err)
+			return StatisticsURL{}, err
+		}
+		ok = true
+	}
+
+	return statisticsURL, nil
 }

@@ -79,6 +79,7 @@ func (d *PGStorage) tableInitData() (int64, error) {
 	}
 }
 
+/*
 func (d *PGStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
@@ -93,6 +94,20 @@ func (d *PGStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+*/
+
+func (d *PGStorage) PingDBf() (int, error) {
+	if d.db == nil {
+		return http.StatusInternalServerError, errors.New(`база данных не открыта`)
+	}
+
+	err := d.db.Ping()
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusOK, nil
 }
 
 func (d *PGStorage) PrintDBF() {

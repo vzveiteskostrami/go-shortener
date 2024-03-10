@@ -177,3 +177,21 @@ func GetOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 	}
 }
 */
+
+func GetStatsf(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	stat, err := dbf.Store.GetStats(r.Context())
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(stat); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Write(buf.Bytes())
+}

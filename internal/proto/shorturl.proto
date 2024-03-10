@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package demo;
+
+option go_package = "shorturl/proto";
+
+message Resp {
+  int32 code = 1;
+  string msg = 2;
+  string token = 3;
+}
+
+message Curl {
+  string correlation_id = 1;
+  string url = 2;
+}
+
+message SetLinkRequest {
+  string url = 1;
+}
+
+message SetLinkResponse {
+  Resp r = 1;
+  string shorturl = 2; 
+}
+
+message SetBatchUrlRequest {
+  repeated Curl urls = 1;
+}
+
+message SetBatchUrlResponse {
+  Resp r = 1;
+  repeated Curl urls = 2;
+}
+
+message GetOwnUrlListRequest {
+}
+
+message GetOwnUrlListResponse {
+  Resp r = 1;
+  repeated Curl urls = 2;
+}
+
+message DelOwnUrlListRequest {
+  repeated string urls = 1;
+}
+
+message DelOwnUrlListResponse {
+  Resp r = 1;
+}
+
+message GetLinkRequest {
+  string surl = 1;
+}
+
+message GetLinkResponse {
+  Resp r = 1;
+  string url = 2;
+}
+
+message PingRequest {
+}
+
+message PingResponse {
+  Resp r = 1;
+}
+
+message GetStatsRequest {
+}
+
+message GetStatsResponse {
+  Resp r = 1;
+  int32 users = 2;
+  int32 surls = 3;
+}
+
+service ShortUrl {
+  rpc SetLink(SetLinkRequest) returns (SetLinkResponse);
+  rpc GetLink(GetLinkRequest) returns (GetLinkResponse);
+  rpc SetBatchUrl(SetBatchUrlRequest) returns (SetBatchUrlResponse);
+  rpc GetOwnUrlList(GetOwnUrlListRequest) returns (GetOwnUrlListResponse);
+  rpc DelOwnUrlList(DelOwnUrlListRequest) returns (DelOwnUrlListResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+}
