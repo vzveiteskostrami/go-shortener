@@ -6,14 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
 	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
-)
-
-var (
-	delCh chan string
+	"github.com/vzveiteskostrami/go-shortener/internal/urlman"
 )
 
 func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
@@ -41,59 +37,10 @@ func DeleteOwnerURLsListf(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if surl != "" {
-				delCh <- surl
+				urlman.WriteToDel(surl)
 				surl = ""
 			}
 		}
 	}()
 }
 
-func GoDel() {
-	delCh = make(chan string)
-	tick := time.NewTicker(300 * time.Millisecond)
-
-	go func() {
-		defer close(delCh)
-		defer tick.Stop()
-		url := ""
-		wasAdd := false
-		dbf.Store.BeginDel()
-		for {
-			select {
-			case <-tick.C:
-				if wasAdd {
-					dbf.Store.EndDel()
-					dbf.Store.BeginDel()
-					wasAdd = false
-				}
-			case url = <-delCh:
-				dbf.Store.AddToDel(url)
-				wasAdd = true
-			}
-		}
-	}()
-}
-
-func DoDel() {
-	delCh = make(chan string)
-	tick := time.NewTicker(300 * time.Millisecond)
-
-	defer close(delCh)
-	defer tick.Stop()
-	url := ""
-	wasAdd := false
-	dbf.Store.BeginDel()
-	for {
-		select {
-		case <-tick.C:
-			if wasAdd {
-				dbf.Store.EndDel()
-				dbf.Store.BeginDel()
-				wasAdd = false
-			}
-		case url = <-delCh:
-			dbf.Store.AddToDel(url)
-			wasAdd = true
-		}
-	}
-}

@@ -59,7 +59,7 @@ func main() {
 	dbf.MakeStorage()
 	urlman.SetURLNum(dbf.Store.DBFInit())
 	defer dbf.Store.DBFClose()
-	go shorturl.DoDel()
+	go urlman.DoDel()
 
 	if config.UsegRPC {
 		lgrpc.DogRPC()

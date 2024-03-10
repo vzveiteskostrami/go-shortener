@@ -12,7 +12,7 @@ import (
 )
 
 func (s *GRPCServer) SetBatchUrl(c context.Context, b *pb.SetBatchUrlRequest) (r *pb.SetBatchUrlResponse, err error) {
-	ownerID, token := getReqParams(c)
+	ownerID, token := getOwnerAndToken(c)
 
 	r = &pb.SetBatchUrlResponse{}
 	r.R = &pb.Resp{Code: http.StatusOK, Msg: "", Token: token}
@@ -31,8 +31,7 @@ func (s *GRPCServer) SetBatchUrl(c context.Context, b *pb.SetBatchUrlRequest) (r
 			if su.UUID == num {
 				num = urlman.NumberUsed()
 			}
-			shorturl := urlman.MakeURL(su.UUID)
-			surl := &pb.Curl{CorrelationId: url.CorrelationId, Url: shorturl}
+			surl := &pb.Curl{CorrelationId: url.CorrelationId, Url: strconv.FormatInt(su.UUID, 36)}
 			r.Urls = append(r.Urls, surl)
 		}
 	}
@@ -40,7 +39,7 @@ func (s *GRPCServer) SetBatchUrl(c context.Context, b *pb.SetBatchUrlRequest) (r
 }
 
 func (s *GRPCServer) SetLink(c context.Context, l *pb.SetLinkRequest) (r *pb.SetLinkResponse, err error) {
-	ownerID, token := getReqParams(c)
+	ownerID, token := getOwnerAndToken(c)
 
 	r = &pb.SetLinkResponse{}
 	r.R = &pb.Resp{Code: http.StatusOK, Msg: "", Token: token}
@@ -71,7 +70,7 @@ func (s *GRPCServer) SetLink(c context.Context, l *pb.SetLinkRequest) (r *pb.Set
 			r.R.Code = http.StatusConflict
 			r.R.Msg = "url уже сохранён"
 		}
-		r.Shorturl = urlman.MakeURL(su.UUID)
+		r.Shorturl = strconv.FormatInt(su.UUID, 36)
 	}
 	return
 }

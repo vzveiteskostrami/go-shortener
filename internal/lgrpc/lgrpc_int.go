@@ -2,34 +2,43 @@ package lgrpc
 
 import (
 	"context"
-	"fmt"
+	"net"
 	"strconv"
 	"time"
 
 	"github.com/vzveiteskostrami/go-shortener/internal/auth"
+	"github.com/vzveiteskostrami/go-shortener/internal/config"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
 	"github.com/vzveiteskostrami/go-shortener/internal/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 )
 
+//const string showProhabited = "просмотр статистики запрещён"
+
 func unaryInterceptorAuth(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+
+	needOwner := true
+	switch req.(type) {
+	case *proto.PingRequest:
+		needOwner = false
+	case *proto.GetLinkRequest:
+		needOwner = false
+	case *proto.GetStatsRequest:
+		needOwner = false
+	}
+
+	if !needOwner {
+		return handler(ctx, req)
+	}
+
 	var token string
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		values := md.Get("token")
 		if len(values) > 0 {
 			token = values[0]
 		}
-	}
-
-	fmt.Printf("Type=")
-	switch tp := req.(type) {
-	case *proto.SetLinkRequest:
-		fmt.Println("GetLink")
-	case bool:
-		fmt.Println("boolean")
-	default:
-		fmt.Printf("%T/n", tp)
 	}
 
 	var ownerID int64 = 0
@@ -72,35 +81,35 @@ func unaryInterceptorLog(ctx context.Context, req interface{}, info *grpc.UnaryS
 		"duration:", duration,
 	)
 
-	/*
-		logging.S().Infoln(
-			"uri:", r.RequestURI,
-			"method:", r.Method,
-			"status:", responseData.status, http.StatusText(responseData.status),
-			"duration:", duration,
-			"size:", responseData.size,
-		)
-	*/
-
 	return a, err
-
 }
 
 func unaryInterceptorTrust(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	/*
-		var token string
-		if md, ok := metadata.FromIncomingContext(ctx); ok {
-			values := md.Get("token")
-			if len(values) > 0 {
-				token = values[0]
-			}
+
+	needTrust := true
+	switch req.(type) {
+	case *proto.GetStatsRequest:
+		needTrust = true
+	default:
+		needTrust = false
+	}
+
+	if !needTrust {
+		return handler(ctx, req)
+	}
+
+	fb := "f"
+	if config.Storage.TrustedIPNet == nil {
+		fb = "t"
+	} else {
+		p, _ := peer.FromContext(ctx)
+		ip := net.ParseIP(p.Addr.String())
+		if ip == nil || !config.Storage.TrustedIPNet.Contains(ip) {
+			fb = "t"
 		}
-		if len(token) == 0 {
-			return nil, status.Error(codes.Unauthenticated, "missing token")
-		}
-		if token != "asdf" {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-	*/
-	return handler(ctx, req)
+	}
+
+	md := metadata.Pairs("fb", fb)
+	c := metadata.NewIncomingContext(context.Background(), md)
+	return handler(c, req)
 }

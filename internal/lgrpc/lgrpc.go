@@ -28,7 +28,7 @@ func DogRPC() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// создаём gRPC-сервер без зарегистрированной службы
+	// создаём gRPC-сервер с middleware на логирование, аутентификацию и траст
 	s := grpc.NewServer(grpc.ChainUnaryInterceptor(unaryInterceptorLog, unaryInterceptorAuth, unaryInterceptorTrust))
 	reflection.Register(s)
 	// регистрируем сервис
@@ -66,7 +66,7 @@ func getFuncName(path string) string {
 	}
 }
 
-func getReqParams(ctx context.Context) (int64, string) {
+func getOwnerAndToken(ctx context.Context) (int64, string) {
 	ownerID := int64(0)
 	token := ""
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
@@ -80,4 +80,15 @@ func getReqParams(ctx context.Context) (int64, string) {
 		}
 	}
 	return ownerID, token
+}
+
+func getForbidden(ctx context.Context) bool {
+	forbidden := true
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		values := md.Get("fb")
+		if len(values) > 0 {
+			forbidden = values[0] == "t"
+		}
+	}
+	return forbidden
 }
