@@ -10,7 +10,6 @@ import (
 var (
 	currURLNum  int64 = 0
 	lockCounter sync.Mutex
-	lockWrite   sync.Mutex
 )
 
 func SetURLNum(num int64) {

@@ -2,7 +2,6 @@ package dbf
 
 import (
 	"context"
-	"net/http"
 
 	_ "github.com/lib/pq"
 	"github.com/vzveiteskostrami/go-shortener/internal/config"
@@ -24,7 +23,7 @@ type GSStorage interface {
 	DBFInit() int64
 	DBFClose()
 	DBFSaveLink(storageURLItem *StorageURL) error
-	PingDBf(w http.ResponseWriter, r *http.Request)
+	PingDBf() (int, error)
 	FindLink(ctx context.Context, link string, byLink bool) (StorageURL, error)
 	DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error)
 	GetStats(ctx context.Context) (StatisticsURL, error)

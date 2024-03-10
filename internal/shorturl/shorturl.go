@@ -1,5 +1,11 @@
 package shorturl
 
+import (
+	"net/http"
+
+	"github.com/vzveiteskostrami/go-shortener/internal/dbf"
+)
+
 type inURL struct {
 	URL string `json:"url"`
 }
@@ -15,21 +21,14 @@ type cmnURL struct {
 	Deleted       *bool   `json:"deleted,omitempty"`
 }
 
-/*
-var (
-	currURLNum  int64 = 0
-	lockCounter sync.Mutex
-	lockWrite   sync.Mutex
-)
+func PingDBff(w http.ResponseWriter, r *http.Request) {
+	code, err := dbf.Store.PingDBf()
 
-func SetURLNum(num int64) {
-	currURLNum = num
-}
-
-func makeURL(num int64) string {
-	if config.Addresses.In == nil {
-		config.ReadData()
+	w.Header().Set("Content-Type", "text/plain")
+	if err != nil {
+		http.Error(w, err.Error(), code)
 	}
-	return config.Addresses.Out.Host + ":" + strconv.Itoa(config.Addresses.Out.Port) + "/" + strconv.FormatInt(num, 36)
+	//w.WriteHeader(http.StatusOK)
+	return
+
 }
-*/

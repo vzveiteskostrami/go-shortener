@@ -91,7 +91,7 @@ func mainRouter() chi.Router {
 
 	r.Route("/ping", func(r chi.Router) {
 		r.Use(logging.WithLogging)
-		r.Get("/", dbf.Store.PingDBf)
+		r.Get("/", shorturl.PingDBff)
 	})
 
 	r.Route("/{shlink}", func(r chi.Router) {

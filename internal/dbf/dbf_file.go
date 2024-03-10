@@ -165,9 +165,8 @@ func (f *FMStorage) FindLink(ctx context.Context, link string, byLink bool) (Sto
 	}
 }
 
-func (f *FMStorage) PingDBf(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusOK)
+func (f *FMStorage) PingDBf() (int, error) {
+	return http.StatusOK, nil
 }
 
 func (f *FMStorage) PrintDBF() {

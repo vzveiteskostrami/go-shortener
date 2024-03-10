@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"sync"
 
 	_ "github.com/lib/pq"
 	"github.com/vzveiteskostrami/go-shortener/internal/logging"
@@ -22,6 +23,8 @@ type PGStorage struct {
 	//
 	delSQLParams []interface{}
 }
+
+var lockWrite sync.Mutex
 
 func (d *PGStorage) DBFGetOwnURLs(ctx context.Context, ownerID int64) ([]StorageURL, error) {
 	rows, err := d.db.QueryContext(ctx, "SELECT SHORTURL,ORIGINALURL from urlstore WHERE OWNERID=$1;", ownerID)
@@ -61,8 +64,8 @@ func (d *PGStorage) DBFSaveLink(storageURLItem *StorageURL) error {
 		storageURLItem.ShortURL = su.ShortURL
 		storageURLItem.Deleted = su.Deleted
 	} else {
-		//lockWrite.Lock()
-		//defer lockWrite.Unlock()
+		lockWrite.Lock()
+		defer lockWrite.Unlock()
 		_, err := d.db.ExecContext(context.Background(), "INSERT INTO urlstore (OWNERID,UUID,SHORTURL,ORIGINALURL,DELETEFLAG) VALUES ($1,$2,$3,$4,$5);",
 			storageURLItem.OWNERID,
 			storageURLItem.UUID,

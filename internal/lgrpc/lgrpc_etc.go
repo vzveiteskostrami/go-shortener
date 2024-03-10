@@ -16,5 +16,6 @@ func (s *GRPCServer) DelOwnUrlList(c context.Context, d *pb.DelOwnUrlListRequest
 func (s *GRPCServer) Ping(c context.Context, p *pb.PingRequest) (r *pb.PingResponse, err error) {
 	r = &pb.PingResponse{}
 	r.R = &pb.Resp{Code: http.StatusOK, Msg: ""}
+
 	return
 }
